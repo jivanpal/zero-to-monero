@@ -6,28 +6,21 @@
 \chapter{Introduction}
 \label{chap:introduction}
 
-The purpose of blockchains is to furnish trust to operations between unrelated parties, without requiring the collaboration of a trusted third party.
+The purpose of blockchains is to furnish trust for operations between unrelated parties, without requiring the collaboration of any trusted third party.
+\\ \newline
+Trust is attained through the use of cryptographic artifacts, which allow data registered in an easily accessible database – the blockchain - to be virtually immutable and non-falsifiable. In other words, a blockchain is a public, distributed database containing data whose legitimacy cannot be disputed by any party.
+\\ \newline
+Cryptocurrencies store transactions in the blockchain, which acts as a public ledger of all the verified currency operations. Most cryptocurrencies store transactions in clear text, to facilitate verification of transactions by the community.
+\\ \newline
+Clearly, an open blockchain defies any basic understanding of privacy, since it virtually {\em publicizes} the complete transaction histories of its users.
+\\ \newline
+To address the lack of privacy, users of cryptocurrencies such as Bitcoin can obfuscate transactions by using temporary intermediate addresses \cite{DBLP:journals/corr/NarayananM17}. However, with appropriate tools it is possible to analyze flows and to a large extent link true senders with receivers \cite{DBLP:journals/corr/ShenTuY15b, DK-police-tracing-btc, Andrew-Cox-Sandia}.
 
-Trust is attained through the use of cryptographic artifacts which cater for virtual immutability and non-falsifiability of data registered in a readily accessible database --- the blockchain.
-In other words, a blockchain is a public distributed database, containing data whose legitimacy cannot 
-be disputed by any party.
-\\
+In contrast, the cryptocurrency Monero attempts to tackle the issue of privacy by storing only stealth, single-use addresses for receipt of funds in the blockchain, and by authenticating the dispersal of funds in each transaction with ring signatures. With these methods there are no effective ways to link senders with receivers or trace the origin of funds \cite{Monero-intro}.
 
-Cryptocurrencies store transactions in the blockchain. The latter acts as a public ledger of all the verified currency operations. Most cryptocurrencies store transactions in clear text, to facilitate the verification of transactions by the community.
-
-Clearly, an open blockchain defies any basic understanding of privacy, since it virtually 
-{\em publicizes} complete transaction histories of its users. 
-\\
-
-To address the lack of privacy, users of cryptocurrencies such as Bitcoin can obfuscate transactions by using temporary intermediate addresses \cite{DBLP:journals/corr/NarayananM17}. However, in spite of such measures, with appropriate tools it is possible to analyze flows and to a large extent 
-link true senders with receivers \cite{DBLP:journals/corr/ShenTuY15b, DK-police-tracing-btc, Andrew-Cox-Sandia}.
-
-In contrast, the cryptocurrency Monero, attempts to tackle the issue of privacy by storing only stealth, single-use addresses in a blockchain, and authenticating transactions with ring signatures. In this manner, there will be no effective way of linking senders with receivers nor tracing the origins of funds \cite{Monero-intro}.
-
-Additionally, transaction amounts in the Monero blockchain are concealed behind cryptographic constructions, so as to complicate the task of inferringr currency flows.
+Additionally, transaction amounts in the Monero blockchain are concealed behind cryptographic constructions, rendering currency flows opaque.
 
 The result is a cryptocurrency with a high level of privacy.
-
 
 
 
@@ -35,74 +28,48 @@ The result is a cryptocurrency with a high level of privacy.
 \section{Objectives}
 \label{sec:goals}
 
-Monero is a cryptocurrency of recent creation, yet it displays a steady growth in popularity\footnote{
-As of December 28\nth, 2017, Monero occupies the 10\nth position as regards market capitalization, see\\ \url{https://coinmarketcap.com/}}. 
-Unfortunately, there is little comprehensive documentation available describing the mechanisms it uses. 
-Even worse, important parts of the theoretical framework in the currency have been published
-in non peer-reviewed papers which are incomplete and/or contain errors.
-For significant parts of the theoretical framework of Monero, only the source code is reliable enough as source
-of information.
+Monero is a cryptocurrency of recent creation, yet it displays a steady growth in popularity\footnote{\label{marketcap_note}As of December 28\nth, 2017, Monero occupies the 10\nth position as regards market capitalization, see\\ \url{https://coinmarketcap.com/}}. 
+Unfortunately, there is little comprehensive documentation describing the mechanisms it uses. Even worse, important parts of its theoretical framework have been published in non peer-reviewed papers which are incomplete and/or contain errors. For significant parts of the theoretical framework of Monero, only the source code is reliable as a source of information.
   
-We intend to palliate this situation by collecting in-depth information about Monero's inner workings, 
-reviewing algorithms and cryptographic schemes, and by discussing the degree to which they might afford sufficient 
-transaction privacy and security to its users.
+We intend to palliate this situation by collecting in-depth information about Monero’s inner workings, reviewing algorithms and cryptographic schemes, and discussing the degree to which they might afford sufficient transaction privacy and security to its users.
 \\ 
 \\ 
 
-We have centered our attention on release 0.11.1.0 of the Monero software suite,
-the most recent release at the moment this is written.
-All transaction related mechanisms described here belong to this version. 
-Deprecated transaction schemes have not been explored to any extent, even if they may
-be partially supported for backward compatibility reasons.
+We have centered our attention on release 0.11.1.0 of the Monero software suite, the most recent release at the moment this is written. All transaction related mechanisms described here belong to this version. Deprecated transaction schemes have not been explored to any extent, even if they may be partially supported for backward compatibility reasons.
 
 
 \section{Readership}
 
-We expect the reader to possess a basic understanding of discrete mathematics and algebraic structures, but possibly only
-fundamental insights in the field of cryptography.
-We also expect the reader to have a basic understanding of how a cryptocurrency like Bitcoin works.
+We expect the reader to possess a basic understanding of discrete mathematics and algebraic structures, but possibly only fundamental insights in the field of cryptography. We also expect the user to have a basic understanding of how a cryptocurrency like Bitcoin works. For technically oriented laymen we have tried to fill potential knowledge gaps in the footnotes.
 
 A reader with this background should be able to follow our constructive, step-by-step description of the elements of the Monero cryptocurrency.
 
-We have omitted on purpose some mathematical technicalities, when they would be in the way of clarity.
-We have also omitted concrete implementation details where we thought they were not essential.
-Our objective has been to present the subject half-way between mathematical cryptography and 
-computer programming, aiming at completeness and conceptual clarity.
+We have purposefully omitted, or delegated to footnotes, some mathematical technicalities, when they would be in the way of clarity. We have also omitted concrete implementation details where we thought they were not essential. Our objective has been to present the subject half-way between mathematical cryptography and computer programming, aiming at completeness and conceptual clarity.
 
 
 
 \section{Origins of the Monero cryptocurrency}
 
-The cryptocurrency Monero, originally known as BitMonero, was created in April, 2014, as a derivative of the proof-of-concept currency CryptoNote.
+The cryptocurrency Monero, originally known as BitMonero, was created in April, 2014 as a derivative of the proof-of-concept currency CryptoNote.
 
-The latter was devised by various individuals. 
-A landmark whitepaper describing the cryptocurrency was published under the pseudonym of Nicolas van Saberhagen in October 2013\cite{cryptoNoteWhitePaper}.
-It offered sender and receiver anonymity through by employing one-time addresses, together with ring signatures to make 
-flows untraceable.
+CryptoNote is a cryptocurrency devised by various individuals. A landmark whitepaper describing it was published under the pseudonym of Nicolas van Saberhagen in October 2013 \cite{cryptoNoteWhitePaper}. It offered sender and receiver anonymity through the use of one-time addresses, and untraceability of flows by means of ring signatures.
 
-Since its inception, Monero has further strengthened its privacy aspects by implementing amount hiding as described by
-Greg Maxwell, among others in \cite{Signatures2015BorromeanRS}, as well as Shen Noether's improvements
+Since its inception, Monero has further strengthened its privacy aspects by implementing amount hiding, as described by Greg Maxwell (among others) in \cite{Signatures2015BorromeanRS}, as well as Shen Noether's improvements
 on ring signatures \cite{ledger34}.
   
 
 \section{Outline}
 
-As hinted earlier, our aim has been to deliver a self-contained and step-by-step description of the Monero
-cryptocurrency. This report has been structured to fulfill this objective and
-lead the reader through all elements needed to describe the inner workings of the currency.
+As hinted earlier, our aim is to deliver a self-contained and step-by-step description of the Monero cryptocurrency. This report has been structured to fulfill this objective, leading the reader through all elements needed to describe the currency’s inner workings.
 \\
 
-In our quest for comprehensiveness, we have chosen to present all the basic elements of cryptography
-needed to understand the complexities of Monero. In Chapter \ref{chap:basicConcepts} we develop essential
-aspects of Elliptic Curve cryptography.
+In our quest for comprehensiveness, we have chosen to present all the basic elements of cryptography needed to understand the complexities of Monero. In Chapter \ref{chap:basicConcepts} we develop essential aspects of Elliptic Curve cryptography.
 
-Chapter \ref{chapter:ring-signatures} outlines the ring signature related algorithms that will be applied to achieve
-confidential but linkable transactions.
+Chapter \ref{chapter:ring-signatures} outlines the ring signature related algorithms that will be applied to achieve confidential transactions while preventing double-spending attacks.
 
 In Chapter \ref{chapter:pedersen-commitments} we introduce the cryptographic mechanisms used to conceal amounts.
 
-Finally, with all the components in place we will be able to expose the transaction
-schemes used in Monero in Chapter \ref{chapter:transactions}.
+Finally, with all the components in place, we will be able to expose the transaction schemes used in Monero in Chapter \ref{chapter:transactions}.
 
 
 %While seemingly outside the main focus of this thesis, we also found that
@@ -113,13 +80,4 @@ schemes used in Monero in Chapter \ref{chapter:transactions}.
 %to putting forth the principles of the consensus algorithm in Monero.
 
 
-Appendices \ref{appendix:RCTTypeFull} and \ref{appendix:RCTTypeSimple} describe the structure of sample
-transactions in the blockchain, providing a connection between the theoretical elements described in earlier sections with 
-their real-life implementation.
-
-
-
-
-
-
-
+Appendices \ref{appendix:RCTTypeFull} and \ref{appendix:RCTTypeSimple} describe the structure of sample transactions in the blockchain, providing a connection between the theoretical elements described in earlier sections with their real-life implementation.

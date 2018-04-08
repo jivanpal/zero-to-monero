@@ -6,29 +6,29 @@
 
 Generally speaking, a cryptographic {\em commitment scheme} is a way of publishing a commitment to a value without revealing the value itself.
 
-As an example, in a flip-coin game, Alice could commit to one outcome before Bob flips the coin, by publishing the value hashed with secret data. After flipping the coin, Alice could prove which value she committed to by publishing her secret data, so that Bob could verify that she did indeed hash the outcome she later declared.
+For example, in a coin-flipping game Alice could privately commit to one outcome (i.e. ‘call it’) before Bob flips the coin by publishing her committed value hashed with secret data. After he flips the coin, Alice could declare which value she committed to and prove it by publishing her secret data. Bob could then verify her claim.
 
-In other words, assume that Alice has a secret string \(b\) and that the value she wants to commit to is \(v\). She could simply hash \(\mathcal{H}(b || v)\) and tell the result to Bob.
-Bob flips the coin and then Alice could prove that she guessed the right outcome \(v\) by telling Bob what the secret string \(b\) was. Bob would then recalculate \(\mathcal{H}(b || v)\) and verify that Alice did indeed guess right.
+In other words, assume that Alice has a secret string $b$ and the value she wants to commit to is $v$. She could simply hash $h = \mathcal{H}(b, v)$ and give $h$ to Bob. Bob flips a coin, Alice gives $b$ to Bob and tells him she committed to $v$, and then Bob calculates $h’ = \mathcal{H}(b, v)$. If $h' = h$, then he knows Alice committed to $v$ before the coin flip.
 \\
 
 \section{Pedersen commitments}
+\label{pedersen_section}
 
-A {\em Pedersen commitment} \cite{Pedersen1992} is a commitment that has the property of being {\em additive}. In other words, if \(C(a)\) and \(C(b)\) denote the commitments for amounts \(a\) and \(b\) respectively, then \(C(a + b) = C(a) + C(b)\) is a commitment for \(a + b\).
-This property is useful when committing transaction amounts, as one could prove, for instance, that inputs equal outputs, without unveiling the amounts at hand.
+A {\em Pedersen commitment} \cite{Pedersen1992} is a commitment that has the property of being {\em additive}. If \(C(a)\) and \(C(b)\) denote the commitments for values \(a\) and \(b\) respectively, then \(C(a + b) = C(a) + C(b)\). This property is useful when committing transaction amounts, as one could prove, for instance, that inputs equal outputs, without revealing the amounts at hand.
 \\
 
-Fortunately, Pedersen commitments are easy to implement with elliptic curve cryptography, as the following holds trivially \[a G + b G = (a + b) G\].
+Fortunately, Pedersen commitments are easy to implement with elliptic curve cryptography, as the following holds trivially \[a G + b G = (a + b) G\]
 
-Clearly, with a simple definition of commitment like \(C(a) = a G\), we would recognize immediately commitments to 0. 
-We could also end up creating cheat tables of commitments to help us recognize common amounts.
+Clearly, by defining a commitment as simply \(C(a) = a G\), we would immediately recognize commitments to 0 (because $0G = 0$). We could also create cheat tables of commitments to help us recognize common amounts $a$.
 
-To attain information-theoretical privacy, one needs to add a secret {\em blinding factor} and another generator \(H\), such that it is unknown for which value of \(\gamma\) the following holds \(H = \gamma G\). The hardness of the discrete logarithm problem ensures the unfeasibility of calculating this value.
+To attain information-theoretic\footnote{\label{information_theoretic_note}Information-theoretic security means even an adversary with infinite computing power could not break an encryption, because they wouldn’t have enough information.} privacy, one needs to add a secret {\em blinding factor} and another generator \(H\), such that it is unknown for which value of \(\gamma\) the following holds: \(H = \gamma G\). The hardness of the discrete logarithm problem ensures calculating $\gamma$ from $H$ is infeasible.
 
-We can then define the commitment of an amount \(a\) as \(C(x, a) = x G + a H\), where \(x\) is a blinding factor. 
+We can then define the commitment to an amount \(a\) as \(C(x, a) = x G + a H\), where \(x\) is a blinding factor that prevents observers from guessing $a$ (for example: if you commit $C(a=1)$, it is trivial to guess and check). 
+
+Commitment $C(x, a)$ is information-theoretically private because there are many possible combinations of $x$ and $a$ that would output the same $C$.\footnote{Basically, there are many $x’$ and $a’$ such that $x’+a’ \gamma = x+a \gamma$. A committer knows one combination, but an attacker has no way to know which one. Furthermore, even the committer can't find another combination without solving the DLP for $\gamma$.} If $x$ is truly random, an attacker would have literally no way to figure out $a$ \cite{maxwell-ct}.%{https://people.xiph.org/~greg/confidential_values.txt}
 \\
 
-In the case of Monero, \(H = to\_point(\mathit{Keccak}(G))\), where \(\mathit{Keccak}\) stands for the novel hashing algorithm of the same name, and \(to\_point\) is a function mapping scalars to curve points.  
+In the case of Monero, $H = \mathcal{H}_p(G)$.\footnote{\label{hashtopoint_note}The Monero codebase has a function $HashToPoint()$ that maps scalars to EC points. For commitments, $H = HashToPoint(SHA3(G))$, where SHA3 stands for the novel $\mathit{Keccak}$ hashing algorithm.}
 
 
 
@@ -57,84 +57,79 @@ In the case of Monero, \(H = to\_point(\mathit{Keccak}(G))\), where \(\mathit{Ke
 \section{Monero commitments}
 \label{sec:pedersen_monero}
 
-A transaction in a cryptocurrency is a collection of inputs and outputs, which must balance. That is, if Alice spends 100 units of the currency (the inputs), then the receiver(s) should receive exactly 100 units in total. In case the payment to Bob is of 50 units only, then a second output of 50 units back to Alice should be added. 
+Owning cryptocurrency is not like a bank account, where a person’s balance exists as a single value in a database. Rather, a person owns a bunch of transaction {\em outputs}. Each output has an `amount’, and the sum of all outputs owned is considered a person’s balance.
 
-In other words, if we had a transaction with inputs \(a_1, ..., a_n\) and outputs \(b_1, ..., b_m\), then an
-observer would justifiably expect that: 
-\[\sum_i a_i - \sum_j b_j = 0\]
+To send cryptocurrency to someone else, we create a transaction. A transaction takes old outputs as {\em inputs} and addresses new outputs to recipients. Since it is rare for inputs to equal intended outputs, most transactions include `change’, an output that sends excess back to the sender. We will elaborate on these topics in Chapter \ref{chapter:transactions}.
 
-Since commitments are additive, then their sum would also equal zero:
+In Monero, transaction amounts are hidden using a technique called RingCT, first implemented in January 2017. While transaction verifiers don’t know how much Moneroj (plural form of Monero, which means money in Esperanto) is contained in each input and output, they still need to prove the sum of inputs equals the sum of outputs. 
 
-\[\sum_{i}{C_{i, in}}     - \sum_{j}{C_{j, out}} = 0\]
+In other words, if we had a transaction with inputs containing amounts \(a_1, ..., a_m\) and outputs with amounts \(b_1, ..., b_p\), then an observer would justifiably expect that: \\
+\[\sum_j a_j - \sum_t b_t = 0\]
 
+Since commitments are additive, the sum of commitments to inputs and outputs should also equal zero\footnote{Recall from Section \ref{elliptic_curves_section} we can subtract a point by inverting its coordinates. If $P = (x, y)$, $-P = (x, -y)$. Recall also that negations of field elements are calculated $\pmod q$, so $(–y \pmod q)$.}:
+\[\sum_{j}{C_{j, in}}     - \sum_{t}{C_{t, out}} = 0\]
 
-This fact would be used by the network to verify that the sender of the transaction is not spending more money
-than he has previously received.
-\\
-
-However, to avoid identifiability of a sender, Shen Noether proposes in \cite{cryptoeprint:2015:1098} verifying instead that the commitments sum to certain non-zero value:
-
+To avoid sender identifiability, Shen Noether proposes \cite{cryptoeprint:2015:1098} verifying that commitments sum to a certain non-zero value:\\
 \begin{align*}
-\sum_{i}{C_{i, in}}     - \sum_{j}{C_{j, out}} &= z G \\
-\sum_{i}{(x_i G + a_i H)}  - \sum_{j}{(y_j G + b_j H)} &= z G \\
-\sum_{i} x_i - \sum_{j} y_j &= z
+\sum_{j}{C_{j, in}}     - \sum_{t}{C_{t, out}} &= z G \\
+\sum_{j}{(x_j G + a_j H)}  - \sum_{t}{(y_t G + b_t H)} &= z G \\
+\sum_{j} x_j - \sum_{t} y_t &= z
 \end{align*}
 
-The reasons why this is useful will become clear later, when we discuss the structure of transactions. 
-
-Nevertheless, while not really summing up to \(0\), we will still refer to valid transaction commitments as {\em Commitments to zero}, as long as the private key \(z\) is known to the committer.
-
+The reasons why this is useful will become clear in Chapter \ref{chapter:transactions}, when we discuss the structure of transactions.
 
 
 
 \section{Range proofs}
 \label{sec:range_proofs}
 
-One problem with additive commitments is that, if we have commitments for \(a\), \(b\) and \(z\) and we intend to use them to prove that \(a + b = z\), then those commitments would also apply if we replace each value in the equation by its additive inverse \(\pmod q\).
+One problem with additive commitments is that, if we have commitments $C(a_1)$, $C(a_2)$, $C(b_1)$, and $C(b_2)$ and we intend to use them to prove that $(a_1 + a_2) - (b_1 + b_2) = 0$, then those commitments would apply if one value in the equation were negative.
 
-For instance, if our base field were \(\mathbb{Z}_7 \) and \(a = 3\), \(b = 2\), \(z = 5\), then the equation would also hold for \(a = 4\), \(b = 5\) and \(z = 2\) \(\pmod 7\). 
+For instance, we could have $a_1 = 6$, $a_2 = 5$, $b_1 = 21$, and $b_2 = -10$.\\
+\begin{flalign*}
+    && (6 + 5) - (&21 + -10) = 0&\\
+     \intertext{\quad \quad \quad \quad \quad where} && 21G + -10G = 21G + (&l-10)G = (l + 11)G = 11G&
+\end{flalign*}
 
-Therefore, any commitments we could create for the amounts at hand would also apply to the inverses of the amounts.
-So we could effectively claim later that the amounts were different, whereby we would be creating money!
+We could keep the 21 output and throw away the -10 output, effectively creating 10 more Moneroj than we put in.
+
+The solution addressing this issue in Monero is to prove each output amount is in a certain range using the Borromean signature scheme described in Section \ref{sec:borromean}.
 \\
 
-The solution used in Monero to address this issue is to sign the ranges of the numbers at hand
-using a Borromean signature scheme described in Section \ref{sec:borromean}, in the manner described here.
+Given a commitment $C(b)$ with blinding factor $y_b$ for amount \(b\), use the binary representation \((b_0, b_1, ..., b_{k-1})\) such that 
+\[b = b_0 2^0 + b_1 2^1 + ... + b_{k-1} 2^{k-1}  \]
+
+Generate random numbers \(y_0, ..., y_{k-1} \in_R \mathbb{Z}_l\) to be used as blinding factors.
+Define also Pedersen commitments for each \(b_i\), \(C_ i = y_i G + b_i 2^i H\),  and derive public keys \(\{C_i, C_i - 2^i H\}\). 
+
+
+Clearly one of those public keys will equal \(y_i G\):\\
+\begin{alignat*}{3}
+\textrm{if}\ b_i = 0 \ \textrm{then}\ \ \ &  \ C_i &&= y_i G + 0 H &&= y_i G \\
+\textrm{if}\ b_i = 1 \ \textrm{then}\ \ \ & \ C_i - 2^i H &&= y_i G + 2^i H  - 2^i H &&= y_i G 
+\end{alignat*}
+
+In other words, a blinding factor \(y_i\) will always be the private key corresponding to one of the points \(\{C_i, C_i - 2^i H\}\). One of these points is a {\em commitment to zero}, because either $b_i 2^i = 0$ or $b_i 2^i - 2^i = 0$. We can prove a transaction output's amount $b$ is in the range $[0, ..., 2^{k} -1]$ by signing it using the Borromean Ring Signature scheme of Section \ref{sec:borromean} with the ring of public keys:
+\[\{ \{C_0, C_0 - 2^0 H\}, ..., \{C_{k-1}, C_{k-1} - 2^{k-1} H\}  \}\]\\
+where we know the private keys $\{y_0, ..., y_{k-1}\}$ corresponding to each pair.
+
+\begin{center}
+    Resulting in a signature $\sigma = (c_1, r_{0,1}, r_{0,2}, r_{1,1}..., r_{k-1,2})$
+\end{center}
+
+
+\section{Range proofs in a blockchain}
+\label{range_proofs_blockchain_section}
+
+In the context of Monero we will use range proofs to prove there are valid amounts in the outputs of each transaction.
+
+Transaction verifiers will have to check that the sum of each output's range proof commitments $C_i$ equals its amount commitment $C_b$. For this to work we need to modify our definition of the blinding factors $y_i$: set $y_0, ..., y_{k-2} \in_R \mathbb{Z}_l$ and, given $y_b$, define $y_{k-1} = y_b - \sum_{i=0}^{k-2} y_i$. The following equation now holds
+\[\sum^{k-1}_{i=0} C_i = C_b\]
+
+We will store only the range proof commitments/keys $C_i$, the output commitment $C_b$, and the signature $\sigma$'s terms in the blockchain. The mining community can easily calculate $C_i - 2^i H$ and verify the Borromean ring signature for each output.
+
+It will not be necessary for the receiver nor any other party to know the blinding factors $y_i$, as their sole purpose is proving a new output's amount is in range. 
 \\
 
-For any amount \(a\), use its binary representation \((a_0, a_1, ..., a_k)\) such that 
-\[a = a_0 2^0 + a_1 2^1 + ... + a_k 2^k  \].
-
-Generate random numbers \(x_1, ..., x_k \in_R \mathbb{Z}\) to be used as blinding factors. 
-Define also Pedersen commitments for each \(a_i\), \(C_ i = x_i G + a_i 2^i H\),  and derive public keys \(\{C_i, C_i - 2^i H\}\). 
-
-Clearly one of those public keys will equal \(x_i G\):
-
-\begin{align*}
-\textrm{if}\ a_i = 0 \ \textrm{then}\ \ \ &  \ C_i = x_i G + 0 H = x_i G \\
-\textrm{if}\ a_i = 1 \ \textrm{then}\ \ \ & \ C_i - 2^i H = x_i G + 2^i H  - 2^i H = x_i G 
-\end{align*}
-
-In other words, a blinding factor \(x_i\) will always be the private key corresponding to one of \(\{C_i, C_i - 2^i H\}\).
-Therefore we will be able to sign an amount \(a\) in a transaction using the Borromean Ring Signature scheme of 
-Section \ref{sec:borromean} with the ring:
-\[\{ \{C_0, C_0 - 2^0 H\}, ..., \{C_k, C_k - 2^k H\}  \}\]
-
-
-
-\section{Range proofs in a blockchain} 
-
-In the context of Monero we will use range proofs to
-commit to individual bit components and to prove that their sum equals the total amount committed. 
-Therefore, it will not be necessary for
-the receiver nor any other party to know the blinding factors \(x_i G\).
-In other words, it is sufficient to know that
-\[\sum^k_{i=0} C_i = C  \]
-
-In the blockchain we will store only the commitments/keys \(C_i\). The mining community will have to check that
-the equation above holds and that the private key of either \(C_i\) or \(C_i - 2^i H\) has been used to sign the amount.
-
-The Borromean signature scheme requires knowledge of \(x_i\) to produce a signature.
-In consequence, upon verifying this relationship between keys, any third party will
-be able to convince himself that amounts fall within ranges and that money is not being artificially {\em created}.
+Since the Borromean signature scheme requires knowledge of $y_i$ to produce a signature, any third party who verifies one can convince himself that each sub-ring contains a commitment to zero, so total amounts must fall within range and money is not being artificially created.
 

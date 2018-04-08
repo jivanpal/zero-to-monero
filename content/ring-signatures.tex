@@ -3,30 +3,24 @@
 \label{chapter:ring-signatures}
 
 
-Ring signatures are signatures generated with a single private key and a set of unrelated public keys.
-The whole set of public keys, including the one corresponding to the private key at hand, is usually called a {\em ring}.
-Somebody verifying the signature would not be able to tell which private key from the ring was used to produce the
-signature.
+Ring signatures are composed of a ring and a signature. Each {\em signature} is generated with a single private key and a set of unrelated public keys. Each {\em ring} is the set of public keys comprising the private key’s public key, and the set of unrelated public keys. Somebody verifying the signature would not be able to tell which of the ring’s members corresponds to the private key that created it.
 \\
 
-Ring signatures were originally called {\em Group Signatures} in that they were thought of as a way of proving that a signer belongs to a group, without necessarily identifying the individual at hand.
-In the context of Monero transactions, they will help making currency flows untraceable.
+Ring signatures were originally called {\em Group Signatures} because they were thought of as a way to prove that a signer belongs to a group, without necessarily identifying him. In the context of Monero transactions they will help make currency flows untraceable, without opening attack vectors on the money supply.
 \\
 
-Ring signature schemes can display a number of properties that will be useful for producing confidential transactions:
+Ring signature schemes display a number of properties that will be useful for producing confidential transactions:
 
 \begin{description}
 	
-	\item[Anonymity] 
-	An observer should not be able to determine the identity of the true signer of the message. Only that the private key used corresponds to one of the public keys in the ring.
-	
+	\item[Signer Ambiguity]
+	An observer should be able to determine the signer is a member of the ring, but not which member.\footnote{\label{anonymity_note}Anonymity for an action is usually in terms of an `anonymity set’, which is `all the people who could have possibly taken that action’. The largest anonymity set is `humanity’, and for Monero it is the so-called {\em mixin level} $v$. Mixin refers to how many fake members each ring signature has. If the mixin is $v$ = 4 then there are 5 possible signers. Expanding anonymity sets makes it progressively harder to find real actors.} Monero uses this to obfuscate the origin of funds in each transaction.
 		
 	\item[Linkability] 
-	If a private key is used to sign two different messages, then the messages will become linked and the duplicity will be  uncovered. In the case of Monero, this property will help preventing double-spending attacks.
+	If a private key is used to sign two different messages then the messages will become linked\footnote{\label{linkability_note}The linkability property does not apply to non-signing public keys. That is, a ring member whose public key has been mixed into different signatures will not be linked.}. As we will show, this property helps prevent double-spending attacks in Monero.
 	 
-	 
-	\item[Exculpability]
-    A ring member whose public key has been used twice in two ring signatures, but is not the true signer for both, will not be linked.
+	\item[Unforgeability]
+    No attacker can forge a signature.\footnote{\label{unforgeability_note}Certain ring signature schemes, including the one in Monero, are strong against adaptive chosen-message and adaptive chosen-public-key attacks. An attacker who can obtain valid signatures for messages and corresponding to specific public keys in rings of his choice cannot discover how to forge the signature of even one message. This is called {\em existential unforgeability}, see \cite{ledger34} and \cite{Liu2004}.} This helps prevent Monero counterfeiting. 
 	
 \end{description}
 
@@ -34,74 +28,89 @@ Ring signature schemes can display a number of properties that will be useful fo
 
 
 \section{Linkable Spontaneous Anonymous Group Signatures (LSAG)}
+\label{LSAG_section}
 
-Originally (for instance in \cite{Chaum:1991:GS:1754868.1754897}), group  signature schemes required trusted group members to manage the collective signatures, who had the theoretical possibility of disclosing the original signer.
+Originally (Chaum in \cite{Chaum:1991:GS:1754868.1754897}), group signature schemes required the system be set up, and in some cases managed, by a trusted person in order to prevent illegitimate signatures and, in a few schemes, adjudicate disputes. Relying on a {\em group secret} is not desirable since it creates a disclosure risk that could undermine anonymity. Moreover, requiring coordination between group members (i.e. for setup and management) is not scalable beyond small groups or within companies.
 
-Relying on a single signature manager is not at all desirable, since it causes a dependency on a single group member, something that
-translates into a disclosure risk
-
-A more interesting scheme was presented by  Liu {\em et al.} in \cite{Liu2004}. The authors detailed an algorithm to cater for {\em Linkable and Spontaneous group signatures}, not requiring the collaboration of any possible co-signers.
-In other words, the signer could select any set of involuntary co-signers to anonymize his own signature. 
+Liu {\em et al.} presented a more interesting scheme in \cite{Liu2004} building on the work of Rivest {\em et al.} in \cite{rivest-leak-secret}. The authors detailed a group signature algorithm characterized by three properties: {\em anonymity, linkability,} and {\em spontaneity}. In other words, the owner of a private key could produce one anonymous signature by selecting any set of co-signers from a list of candidate public keys, without needing to collaborate with anyone.\footnote{\label{lsag_linkability_note}In the LSAG scheme linkability only applies to signatures using rings with the same members and in the same order, the `exact same ring’. It is really ``one anonymous signature per ring”. Linked signatures can be attached to different messages.}
 
 
 \subsection*{Signature}
 
-Let \(\mathfrak{m}\) be the message to sign, \(\mathcal{R} = \{K_1, K_2, ..., K_n\}\) a set of distinct public keys (a group/ring), \(k_\pi\) the private key corresponding to \(K_\pi \in \mathcal{R}\). Assume also the existence of two hash functions, \(\mathcal{H}_n\) and \(\mathcal{H}_p\),
-mapping to integers \(\pmod N\), and curve points respectively\footnote{ 
-	A simple definition for \(\mathcal{H}_p\) 
-	could be \(\mathcal{H}_p(x) = \mathcal{H}_n(x) G\)
-}.
+Let \(\mathfrak{m}\) be the message to sign, \(\mathcal{R} = \{K_1, K_2, ..., K_n\}\) a set of distinct public keys (a group/ring), and \(k_\pi\) the signer's private key corresponding to his public key\footnote{\label{notation2_note}Notation: $K_{\pi} \in \mathcal{R}$ means $K_{\pi}$ is a term in the set $\mathcal{R}$.} \(K_\pi \in \mathcal{R}\), where $\pi$ is a secret index. Assume the existence of two hash functions, \(\mathcal{H}_n\) and \(\mathcal{H}_p\),
+mapping to integers from 1 to $l$,\footnote{In Monero, the hash function $\mathcal{H}_n(x) = \textrm{sc\textunderscore reduce32}(\mathit{Keccak}(x))$ where $\mathit{Keccak}$ is the basis of SHA3 and sc\textunderscore reduce32() puts the 256 bit result in the range 1 to $l$.} and curve points in EC\footnote{It doesn’t matter if points from $\mathcal{H}_p$ are compressed or not. They can always be decompressed.}\footnote{Monero uses a hash function that returns curve points directly, rather than computing some integer that is then multiplied by $G$. $\mathcal{H}_p$ would be broken if someone discovered a way to find $n_x$ s.t. $n_x G = \mathcal{H}_p(x)$.} respectively.
 
 \begin{enumerate}
-	\item Compute \(\tilde{K} = k_\pi \mathcal{H}_p(\mathcal{R})\)
+	\item Compute key image \(\tilde{K} = k_\pi \mathcal{H}_p(\mathcal{R})\)
 	
-	\item Generate random numbers \(\alpha \in_R \mathbb{Z}_q\) and  \(r_i \in_R \mathbb{Z}_q\) for \(i \in \{0, 1, ..., n\}\) and \(i \ne \pi\)
+	\item Generate random number\footnote{\label{notation3_note}Notation: \(\alpha \in_R \mathbb{Z}_l\) means $\alpha$ is randomly selected from \(\{1, 2, ..., l\}\).} \(\alpha \in_R \mathbb{Z}_l\) and random numbers  \(r_i \in_R \mathbb{Z}_l\) for \(i \in \{0, 1, ..., n\}\) but excluding \(i = \pi\).
 	
 	\item Calculate
-	\[c_{\pi+1} = \mathcal{H}_n(\mathcal{R}, \tilde{K}, \mathfrak{m}, \alpha G, \alpha \tilde{K} )\]
+	\[c_{\pi+1} = \mathcal{H}_n(\mathcal{R}, \tilde{K}, \mathfrak{m}, \alpha G, \alpha \mathcal{H}_p(\mathcal{R}))\]
 	
-	\item For \(i = \pi+1, \pi+2, ..., n, 1, 2, ..., \pi-1\) calculate, replacing \(n + 1 \rightarrow 1\)
-	\[  c_{i+1} = \mathcal{H}_n(\mathcal{R}, \tilde{K}, \mathfrak{m}, r_i G + c_i K_i, r_i \mathcal{H}_p(R) + c_i \tilde{K} )  \] 
+	\item For \(i = \pi+1, \pi+2, ..., n, 1, 2, ..., \pi-1\) calculate, replacing \(n + 1 \rightarrow 1\),
+	\[  c_{i+1} = \mathcal{H}_n(\mathcal{R}, \tilde{K}, \mathfrak{m}, [r_i G + c_i K_i], [r_i \mathcal{H}_p(R) + c_i \tilde{K}])  \] 
 	
 	
-	\item define \(r_\pi = \alpha -k_\pi c_\pi \pmod N\)
+	\item Define $r_\pi$ such that \(\alpha = r_\pi + c_\pi k_\pi \pmod l\)
 	
 \end{enumerate}
 
-The signature will be \(\sigma(\mathfrak{m}) = (c_1, r_1, ..., r_n, \tilde{K}) \)
+The ring signature contains the signature \(\sigma(\mathfrak{m}) = (c_1, r_1, r_2, ..., r_n, \tilde{K}) \) and the ring $\mathcal{R}$.
 
 \subsection*{Verification}
 
-The verification of a signature is done in the following manner
+Verification means proving $\sigma(\mathfrak{m})$ is a valid signature created by a private key corresponding to a public key in $\mathcal{R}$, and is done in the following manner 
 
 \begin{enumerate}
-	\item  For \(i = 1, 2, ..., n\) compute, replacing \(n + 1 \rightarrow 1\)
+	\item  For \(i = 1, 2, ..., n\) iteratively compute, replacing \(n + 1 \rightarrow 1\),
 	\begin{align*}
 	z_i'       &= r_i G + c_i {K_i} \\
 	z_i''      & = r_i \mathcal{H}_p(\mathcal{R}) + c_i \tilde{K} \\
 	c'_{i+1}   &= \mathcal{H}_n(\mathcal{R}, \tilde{K}, \mathfrak{m}, {z_i}', {z_i}'')
 	\end{align*}
 	
-	\item if \(c'_1 = c_1\) then the signature is valid
+	\item If \(c'_1 = c_1\) then the signature is valid. Note that $c'_1$ is the last term calculated.
 \end{enumerate}
+
+
 
 
 
 \subsection*{Why it works}
 
-We can convince ourselves that the algorithm works by observing the following:
+We can convince ourselves the algorithm works by going through an example. Consider ring $R = \{K_1, K_2, K_3\}$ with $k_\pi = k_2$. First the signature:
+\begin{enumerate}
+    \item Create key image: $\tilde{K} = k_\pi \mathcal{H}_p(\mathcal{R})$
+    \item Generate random numbers: 	$\alpha$, $r_1$, $r_3$
+\begin{align*}
+    \intertext{\item Seed the encryption:}	c_3 &= \mathcal{H}_n(..., \alpha G, \alpha \mathcal{H}_p(\mathcal{R}))
+    \intertext{\item Iterate: } 
+        c_1 &= \mathcal{H}_n(..., [r_3 G + c_3 K_3], [r_3 \mathcal{H}_p(\mathcal{R}) + c_3 \tilde{K}])\\
+        c_2 &= \mathcal{H}_n(..., [r_1 G + c_1 K_1], [r_1 \mathcal{H}_p(\mathcal{R}) + c_1 \tilde{K}])
+\end{align*}
+    \item Close the loop: $r_2 = \alpha - c_2 k_2 \pmod{l}$
+\end{enumerate}
 
-\begin{itemize}
-	
-	\item[]If \(i \ne \pi\) then \(c'_{i+1}\) is defined as in the signature algorithm.
+We can substitute $\alpha$ into $c_3$ to see where the word ‘ring’ comes from:
+\begin{alignat*}{3}
+    c_3 &= \mathcal{H}_n(..., [(r_2 + c_2 k_2) G &&] , [(r_2 + c_2 k_2) \mathcal{H}_p(\mathcal{R})&&])\\
+    c_3 &= \mathcal{H}_n(..., [r_2 G + c_2 K_2 &&] , [r_2 \mathcal{H}_p(\mathcal{R}) + c_2 \tilde{K}&&])
+\end{alignat*} 
 
-	\item[] If \(i = \pi\) then 
-	\begin{align*}
-	   z_i'  &= r_i G + c_i K_i = (\alpha - k_\pi c_\pi) G + c_\pi K_\pi = \alpha G \\
-	   z_i'' &= r_i \mathcal{H}_p(\mathcal{R}) + c_i \tilde{K} = (\alpha - k_\pi c_\pi) \mathcal{H}_p(\mathcal{R}) + c_\pi k_\pi \mathcal{H}_p(\mathcal{R}) =  \alpha \tilde{K}
+Then verification using $\mathcal{R}$ and $\sigma(\mathfrak{m}) = (c_1, r_1, r_2, r_3, \tilde{K})$:
+\begin{enumerate}
+    \item $r_1$	\hfill $z'_1 = r_1 G + c_1 K_1$		\hfill $z"_1 = r_1 \mathcal{H}_p(\mathcal{R}) + c_1 \tilde{K}$ \hfill \phantom{.}
+    \begin{align*}
+c'_2 &= \mathcal{H}_n(..., [r_1 G + c_1 K_1], [r_1 \mathcal{H}_p(\mathcal{R}) + c_1 \tilde{K}])
+    \intertext{\item $r_2$ \hfill $z'_2 = r_2 G + c_2 K_2$ \hfill $z_2” = r_2 \mathcal{H}_p(\mathcal{R}) + c_2 \tilde{K}$ \hfill \phantom{.}}
+c'_3 &= \mathcal{H}_n(..., [r_2 G + c_2 K_2], [r_2 \mathcal{H}_p(\mathcal{R}) + c_2 \tilde{K}])
+    \intertext{\item $r_3$ \hfill $z'_3 = r_3 G + c_3 K_3$ \hfill $z_3” = r_3 \mathcal{H}_p(\mathcal{R}) + c_3 \tilde{K}$ \hfill \phantom{.}} 
+c'_1 &= \mathcal{H}_n(..., [r_3 G + c_3 K_3], [r_3 \mathcal{H}_p(\mathcal{R}) + c_3 \tilde{K}])
     \end{align*}
-    So even in this case the expression \(c'_{i+1} = \mathcal{H}_n(\mathcal{R}, \tilde{K}, \mathfrak{m}, {z_n}^\prime, {z_n}^{\prime\prime})\) will equal \(c_{i+1}\)
-\end{itemize}
+\end{enumerate}
+\quad and so, $c'_1 = c_1$.
+
 
 
 \subsection*{Linkability}
@@ -111,47 +120,38 @@ Given a fixed set of public keys \(\mathcal{R}\), and two valid signatures for d
 \sigma   &= (c_1, s_1, ..., s_n, \tilde{K})\\
 \sigma'  &= (c_1', s'_1, ..., s'_n, \tilde{K}')
 \end{align*}
-if \(\tilde{K} =  \tilde{K}'\) then clearly both signatures come from the same signing ring and private key
+if \(\tilde{K} =  \tilde{K}'\) then clearly both signatures come from the same signing ring and private key because $\tilde{K}= k_{\pi} \mathcal{H}_p(\mathcal{R})$.
 
-In other words, the LSAG signature scheme yields mutually {\bf linkable} signatures in the case a ring and a private key would be re-used.
-
-
-\subsection*{Exculpability}
-
-At the same time, given that \(\tilde{K} = k_\pi \mathcal{H}_p(\mathcal{R})\), we can readily see that linkability 
-would only apply if private key \(k_\pi\) were re-used. 
-Hence, no other group/ring member could be accused of signing twice. 
-
+While an observer could link $\sigma$ and $\sigma'$, he wouldn’t know which $K_i$ in $\mathcal{R}$ was the culprit without solving the DLP or auditing $\mathcal{R}$ in some way (such as learning all $k_i$ with $i \neq \pi$, or learning $k_\pi$).\footnote{\label{lsag_unforgeable_note}LSAG is unforgeable, meaning no attacker could make a valid ring signature without knowing a private key. If he invents a fake $\tilde{K}$ and seeds his signature computation with $c_{\pi+1}$, then, not knowing $k_\pi$, he can’t calculate a number $r_\pi = \alpha - c_\pi k_\pi$ that would produce $[r_\pi G + c_\pi K_\pi] = \alpha G$. A verifier would reject his signature. Liu {\em et al.} prove forgeries that manage to pass verification are extremely improbable \cite{Liu2004}.}
 
 
 
 \section{Back Linkable Spontaneous Anonymous Group Signatures (bLSAG)}
+\label{blsag_note}
 
-In the LSAG signature scheme, linkability of signatures can only be guaranteed if the ring is constant.
-This can be seen by looking at the definition of \(\tilde{K}\).
+In the LSAG signature scheme, linkability of signatures using the same private key can only be guaranteed if the ring is constant. This is obvious from the definition \(\tilde{K} = k_\pi \mathcal{H}_p(\mathcal{R})\).
 
-In this section we present an enhanced version of the LSAG algorithm that provides linkability of the private key used, allowing the
-ring to contain different spurious keys.
+In this section we present an enhanced version of the LSAG algorithm where linkability is independent of the ring’s co-signers.
 
-The modification was unraveled in \cite{cryptoeprint:2015:1098}. It is based on a publication by A. Back regarding the CryptoNote ring signature algorithm, see \cite{AdamBack-ring-efficiency} for details.
+The modification was unraveled in \cite{cryptoeprint:2015:1098} based on a publication by A. Back \cite{AdamBack-ring-efficiency} regarding the CryptoNote \cite{cryptoNoteWhitePaper} ring signature algorithm.
 
 
 \subsection*{Signature}
 
 
 \begin{enumerate}
-	\item Calculate \(\tilde{K} = k_\pi \mathcal{H}_p(K_\pi)\)
+	\item Calculate key image \(\tilde{K} = k_\pi \mathcal{H}_p(K_\pi)\)
 	
-	\item Generate random numbers \(\alpha \in_R \mathbb{Z}_q\) and  \(r_i \in_R \mathbb{Z}_q\) for \(i \in \{0, 1, ..., n\}\) and \(i \ne \pi\)
+	\item Generate random number \(\alpha \in_R \mathbb{Z}_l\) and random numbers  \(r_i \in_R \mathbb{Z}_l\) for \(i \in \{0, 1, ..., n\}\) but excluding \(i = \pi\)
 	
 	\item Compute
 	\[c_{\pi+1} = \mathcal{H}_n(\mathfrak{m}, \alpha G, \alpha \mathcal{H}_p(K_\pi))\]
 	
-	\item For \(i = \pi+1, \pi+2, ..., n, 1, 2, ..., \pi-1\) calculate, replacing \(n + 1 \rightarrow 1\)
-	\[  c_{i+1} = \mathcal{H}_n(\mathfrak{m}, r_i G + c_i K_i, r_i \mathcal{H}_p(K_i) + c_i \tilde{K} )  \] 
+	\item For \(i = \pi+1, \pi+2, ..., n, 1, 2, ..., \pi-1\) calculate, replacing \(n + 1 \rightarrow 1\),
+	\[  c_{i+1} = \mathcal{H}_n(\mathfrak{m}, [r_i G + c_i K_i], [r_i \mathcal{H}_p(K_i) + c_i \tilde{K}])  \] 
 	
 	
-	\item Define \(r_\pi = \alpha -k_\pi c_\pi \pmod N\)
+	\item Define \(r_\pi = \alpha -k_\pi c_\pi \pmod l\)
 	
 \end{enumerate}
 
@@ -160,15 +160,12 @@ The signature will be \(\sigma(\mathfrak{m}) = (c_1, r_1, ..., r_n, \tilde{K}) \
 
 As in the original LSAG scheme, verification takes place by recalculating the value \(c_1\).
 
-Correctness of the approach can be verified in a similar way.
+Correctness can also be demonstrated (i.e. `how it works') in a way similar to the LSAG scheme.
 \\
 
-The alert reader will no doubt notice that the value \(\tilde{K} \) depends only on the keys of the true signer.
-In other words, two signatures will now be linkable if and only if the same private key was used to create the signature,
-independently of the ring used to anonymize the signer. 
+The alert reader will no doubt notice that the key image $\tilde{K}$ depends only on the keys of the true signer. In other words, two signatures will now be linkable if and only if the same private key was used to create the signature. In bLSAG, rings are just involved in obfuscating each signer’s identity. bLSAG also reduces the time it takes to sign and verify by removing $\mathcal{R}$ and $\tilde{K}$ from the hash that calculates $c_i$.
 
-This notion of linkability will prove to be more useful for Monero than the one offered by the LSAG algorithm, as it
-will allow detecting double-spending attempts without putting constraints on the ring members used.
+This approach to linkability will prove to be more useful for Monero than the one offered by the LSAG algorithm, as it will allow detecting double-spending attempts without putting constraints on the ring members used.
 
 
 
@@ -176,58 +173,54 @@ will allow detecting double-spending attempts without putting constraints on the
 \label{sec:MLSAG}
 
 In order to be able to sign multi-input transactions, one has to be able to sign with
-\(m\) private keys. In \cite{cryptoeprint:2015:1098, ledger34}, Noether S. et al. describe a multi-layered generalization of the bLSAG signature scheme applicable when we have a set of \(n \cdot m\) keys, that is, the set
+\(m\) private keys. In \cite{cryptoeprint:2015:1098, ledger34}, Noether S. {\em et al.} describe a multi-layered generalization of the bLSAG signature scheme applicable when we have a set of \(n \cdot m\) keys, that is, the set\\
 \[\mathcal{R} = \{ K_{i,j} \}  \quad \textrm{for} \quad  i \in \{1, 2, ..., n\} \quad \textrm{and} \quad j \in \{1, 2, ..., m\}\] 
 
-for which we know
-the private keys \(\{k_{\pi, j} \} \) corresponding to the subset \(\{K_{\pi, j}\} \) for some index \(\pi\). 
+for which we know the private keys \(\{k_{\pi, j} \} \) corresponding to the subset \(\{K_{\pi, j}\} \) for some index \(i = \pi\).\footnote{\label{mlsag_note}Another way to think about MLSAG is that there are $m$ sub-rings of size $n$, and in each sub-ring we know a private key at index $i = \pi$ ($m \cdot n$ total public keys). The signature algorithm encrypts a ‘stack’ of keys at each stage $c$, composed of one key from each sub-ring. bLSAG is the special case where $m = 1$.}
 
-Such an algorithm would indeed address our multi-input needs, provided we generalize the notion of linkability.
+Such an algorithm would address our multi-input needs provided we generalize the notion of linkability.
 
 \begin{description}
-	\item[Linkability:] if any of private keys \(k_{\pi, j}\) would be used in 2 different signatures, then these signatures would be automatically linked.
+	\item[Linkability:] if any of private keys \(k_{\pi, j}\) is used in 2 different signatures, then these signatures will be automatically linked.
 \end{description}
 
-
-
+\newpage
 \subsection*{Signature}
-
-The {\em MLSAG} algorithm would be described by the following steps:
 
 \begin{enumerate}
 	
-	\item Calculate \(\tilde{K_j} = k_{\pi_i} \mathcal{H}_p(K_{\pi, j})\) for all \(j \in \{1, 2, ..., m\}\)
+	\item Calculate key images \(\tilde{K_j} = k_{\pi, j} \mathcal{H}_p(K_{\pi, j})\) for all \(j \in \{1, 2, ..., m\}\)
 	
-	\item Generate random numbers  \(\alpha_j \in_R \mathbb{Z}_q\), and \(r_{i, j} \in_R \mathbb{Z}_q\) (excluding all \(r_{\pi, j}\)) for \(j \in \{1, 2, ..., m\}\) 
+	\item Generate random numbers  \(\alpha_j \in_R \mathbb{Z}_l\), and \(r_{i, j} \in_R \mathbb{Z}_l\) for \(i \in \{1, 2, ..., n\}\) (except \(i = \pi\)) and \(j \in \{1, 2, ..., m\}\) 
 	
 	\item Compute 
 	\[
-	c_{\pi+1} = \mathcal{H}_n(\mathfrak{m}, \alpha_1 G, \alpha_1 \mathcal{H}_p(K_{\pi, 1}), ..., \alpha_n G, \alpha_n \mathcal{H}_p(K_{\pi, m}))
+	c_{\pi+1} = \mathcal{H}_n(\mathfrak{m}, \alpha_1 G, \alpha_1 \mathcal{H}_p(K_{\pi, 1}), ..., \alpha_m G, \alpha_m \mathcal{H}_p(K_{\pi, m}))
 	\]
 	
-	\item For \(i = \pi+1, \pi+2, ..., n, 1, 2, ..., \pi-1\) calculate, replacing \(n + 1 \rightarrow 1\)
-	\[  c_{i+1} = \mathcal{H}_n(\mathfrak{m}, r_{i, 1} G + c_i K_{i, 1}, r_{i, 1} \mathcal{H}_p(K_{i, 1}) + c_i \tilde{K}_1, 
-	..., r_{i, m} G + c_i K_{i, m}, r_{i, m} \mathcal{H}_p(K_{i, m}) + c_i \tilde{K}_m)  \] 
+	\item For \(i = \pi+1, \pi+2, ..., n, 1, 2, ..., \pi-1\) calculate, replacing \(n + 1 \rightarrow 1\),\\
+	\[  c_{i+1} = \mathcal{H}_n(\mathfrak{m}, [r_{i, 1} G + c_i K_{i, 1}], [r_{i, 1} \mathcal{H}_p(K_{i, 1}) + c_i \tilde{K}_1], 
+	..., [r_{i, m} G + c_i K_{i, m}], [r_{i, m} \mathcal{H}_p(K_{i, m}) + c_i \tilde{K}_m])  \] 
 	
 	
-	\item Define \(r_{\pi, j} = \alpha_j -k_{\pi, j} c_\pi \pmod N\)
+	\item Define \(r_{\pi, j} = \alpha_j -k_{\pi, j} c_\pi \pmod l\)
 	
 \end{enumerate}
 
-The signature will be \(\sigma(\mathfrak{m}) = (c_1, r_{1, 1}, ..., r_{n, 1}, ..., r_{1, m}, ..., r_{n, m}, \tilde{K}_1, ...,  \tilde{K}_m) \).
+The signature will be \(\sigma(\mathfrak{m}) = (c_1, r_{1, 1}, ..., r_{1, m}, ..., r_{n, 1}, ..., r_{n, m}, \tilde{K}_1, ...,  \tilde{K}_m) \).
 
 \subsection*{Verification}
 
 The verification of a signature is done in the following manner
 
 \begin{enumerate}
-	\item  For \(i = 1, ..., n\) compute, replacing \(n + 1 \rightarrow 1\)
+	\item  For \(i = 1, ..., n\) compute, replacing \(n + 1 \rightarrow 1\),\\
 	\begin{align*}
-	c'_{i+1} = \mathcal{H}_n(\mathfrak{m}, r_{i, 1} G + c_i K_{i, 1}, r_{i, 1} \mathcal{H}_p(K_{i, 1}) + c_i \tilde{K}_1, 
-	..., r_{i, m} G + c_i K_{i, m}, r_{i, m} \mathcal{H}_p(K_{i, m}) + c_i \tilde{K}_m) 
+	c'_{i+1} = \mathcal{H}_n(\mathfrak{m}, [r_{i, 1} G + c_i K_{i, 1}], [r_{i, 1} \mathcal{H}_p(K_{i, 1}) + c_i \tilde{K}_1], 
+	..., [r_{i, m} G + c_i K_{i, m}], [r_{i, m} \mathcal{H}_p(K_{i, m}) + c_i \tilde{K}_m]) 
 	\end{align*}
 	
-	\item if \(c'_1 = c_1\) then the signature is valid
+	\item If \(c'_1 = c_1\) then the signature is valid
 \end{enumerate}
 
 
@@ -239,15 +232,15 @@ Just as with the original LSAG algorithm, we can readily observe that
 
 \item[] if \(i \ne \pi \) then clearly the values \(c'_{i + 1}\) are calculated as described in the signature algorithm
 
-\item[] if \(i = \pi\) then, since \(r_{\pi, j} = \alpha_j -k_{\pi, j} c_\pi \)
-\begin{align*}  
-  r_{\pi, j} G + c_\pi K_{\pi,j}                              
-                   &= (\alpha_j - k_{\pi, j} c_\pi) G + c_\pi K_{\pi, j}     
-                   = \alpha_j G \\  
-  r_{\pi, j} \mathcal{H}_p(K_{\pi, j}) + c_\pi \tilde{K}_j  
-                   &= (\alpha_j - k_{\pi, j} c_\pi) \mathcal{H}_p(K_{\pi, j}) + c_\pi \tilde{K}_j 
-                   = \alpha_j \mathcal{H}_p(K_{\pi, j}) 
-\end{align*}
+\item[] if \(i = \pi\) then, since \(r_{\pi, j} = \alpha_j -k_{\pi, j} c_\pi \)\\
+\begin{alignat*}{6}  
+  &r_{\pi, j} G &&+ c_\pi K_{\pi,j}                              
+                   &&= (\alpha_j - k_{\pi, j} c_\pi) G &&+ c_\pi K_{\pi,j}
+                   &&= \alpha_j G \\  
+  &r_{\pi, j} \mathcal{H}_p(K_{\pi, j}) &&+ c_\pi \tilde{K}_j  
+                   &&= (\alpha_j - k_{\pi, j} c_\pi) \mathcal{H}_p(K_{\pi, j}) &&+ c_\pi \tilde{K}_j
+                   &&= \alpha_j \mathcal{H}_p(K_{\pi, j})\\ 
+\end{alignat*}
    In other words, it holds also that \(c'_{\pi + 1} = c_{\pi+1}\) 
 
 \end{itemize}
@@ -255,8 +248,7 @@ Just as with the original LSAG algorithm, we can readily observe that
 
 \subsection*{Linkability}
 
-In case a private key \(k_{\pi, j}\) would be re-used, then the corresponding value \(\tilde{K}_j\) supplied in the signature would reveal it.
-This observation matches our generalized definition of linkability.
+If a private key \(k_{\pi, j}\) is re-used to make any signature, the corresponding key image \(\tilde{K}_j\) supplied in the signature will reveal it. This observation matches our generalized definition of linkability.\footnote{As with LSAG, linked MLSAG signatures do not indicate which public key was used to sign it. However, if each ring has only one key in common, the culprit is obvious.}
 
 
 \subsection*{Space requirements}
@@ -268,91 +260,71 @@ Assuming point compression, an MLSAG signature would clearly consume a total of
 \section{Borromean Ring Signatures}
 \label{sec:borromean}
 
-We will see in later sections of this report that it will be necessary to prove that transaction amounts are within
-expected ranges.
-This can be acomplished with ring signatures. 
-However, to this particular end it is not necessary that signatures be linkable, which allows us to select more efficient algorithms in terms of space consumed.
+We will see in later sections of this report that it will be necessary to prove transaction amounts are within an expected range. This can be accomplished with ring signatures. However, to this particular end it is not necessary that signatures be linkable, which allows us to select more efficient algorithms in terms of space consumed.
 
-In this context, and for the specific purpose of proving amount ranges, Monero uses a signature scheme developed by G. Maxwell, which he described  in \cite{Signatures2015BorromeanRS}.
-We present here a simplified version of the scheme, in that we will assume that
-we have the same number of keys for any value of the first index \(i\).
+In this context, and for the {\em singular purpose} of proving amount ranges, Monero uses\footnote{\label{asnl_note}Monero’s first iteration of `range proofs’ used Aggregate Schnorr Non-Linkable Ring Signatures (ASNL) \cite{ledger34}. According to the author of ASNL it reduces to a kind of Borromean ring signature \cite{ASNL-issue}, but since the latter is more general and secure it was chosen for final implementation in November 2016.} a signature scheme developed by G. Maxwell, which he described in \cite{Signatures2015BorromeanRS}. We present here a complete version of the scheme for educational purposes. In Monero, range proofs require sub-rings with exactly 2 keys corresponding to each digit of an amount represented in binary. This means all $m_i = 2$, so the Borromean scheme can be implemented in a simpler form.
 
-In our case, range proofs will require exactly 2 keys for each digit, so this simplification
-will not have any negative impact. 
-\\
+Assume we have a set $\mathcal{R}$ of public keys $\{K_{i,j_i}\}$ for $i \in \{1,2,...,n\}$ and $j_i \in \{1, 2, ..., m_i\}$. In other words, $\{K_{i,j_i}\}$ is like a bookshelf of public keys with $n$ shelves, and on each $i\nth$ shelf are $m_i$ public keys ordered from 1 to $m_i$. $m_i$ can be different for each $i$, hence the subscript.
 
+Furthermore, assume for each $i$ there is an index $\pi_i$ such that the signer knows private key $k_{i,\pi_i}$ corresponding to $K_{i,\pi_i}$. Following the analogy, a signer knows one private key for the $j_i = \pi_i\nth$ public key on each shelf $i$ in the bookshelf.
 
-Assume that we have a set of public keys \(\{ K_{i,j} \} \) for \(i \in \{1, 2, ..., n\}\) and \(j \in \{1, 2, ..., m\}\).
-
-Furthermore, we assume also that for each \(i\) there is an index \(\pi_i\) such that signer knows the private key \(k_{i,\pi_i}\) corresponding to \(K_{i,\pi_i}\).
-
-In what follows we will use \(\mathfrak{m}\) for the hash of the message concatenated with keys
-\(\{ K_{i,j} \} \).
+In what follows, \(\mathfrak{m}\) is a hash of the message to be signed with keys \(\{ K_{i,j} \} \).
 
 \subsection*{Signature}
 
 
 \begin{enumerate}
-	\item For each \(i = 1, ..., n \): \\
+	\item For each shelf \(i = 1, ..., n \):
 	\begin{enumerate}
-		\item generate a random value \(\alpha_i \in_R \mathbb{Z}_q\)
+		\item generate a random value \(\alpha_i \in_R \mathbb{Z}_l\)
 		
-		\item set \(c_{i, \pi_i} = \mathcal{H}_n(\mathfrak{m}, \alpha_i G, i, \pi_i)\)  
+		\item seed the shelf's sub-ring: set \(c_{i, \pi_i+1} = \mathcal{H}_n(\mathfrak{m}, \alpha_i G, i, \pi_i)\)  
            
 		
-		\item for \(j = \pi_i + 1, ..., m-1 \) generate random numbers \(r_{i,j} \in_R \mathbb{Z}_q\) and compute,
-         
-         
-		  \[c_{i, j+1} = \mathcal{H}_n(\mathfrak{m}, r_{i,j} G - c_{i, j} K_{i, j}, i, j)\]
+		\item build first half of sub-ring from seed: for \(j_i = \pi_i + 1, ..., m_i-1 \) generate random numbers \(r_{i,j_i} \in_R \mathbb{Z}_l\) and compute\\
+		  \[c_{i, j_i+1} = \mathcal{H}_n(\mathfrak{m}, [r_{i,j_i} G - c_{i, j_i} K_{i, j_i}], i, j_i)\]
 
 	\end{enumerate}
 	  
-	 \item For \(i  = 1, ..., n \) generate random numbers \(r_{i, m} \in_R \mathbb{Z}_q\) and compute
-	  \[c_1 = \mathcal{H}_n ( r_{1, m} G - c_{1,m} K_{1, m}, ..., r_{n, m} G - c_{n, m} K_{i, m}  )\]
+	 \item Use last public key on each shelf to connect all sub-rings together: for \(i  = 1, ..., n \) generate random numbers \(r_{i, m_i} \in_R \mathbb{Z}_l\) and compute
+	  \[c_1 = \mathcal{H}_n ([r_{1, m_1} G - c_{1,m_1} K_{1, m_1}], ..., [r_{n, m_n} G - c_{n, m_n} K_{n, m_n}])\]\\
+	  Note: if any $\pi_i = m_i$ put the seed term $\alpha_i G$ in the connector $c_1$.
 	  
-	 \item For \(i = 1, .., n \):
+	 \item For each \(i = 1, .., n \):
 	 
 	 \begin{enumerate}
-	 	\item for \(j = 1, ..., \pi_i-1 \) generate random numbers \(r_{i, j} \in_R \mathbb{Z}_q\) and compute
- 	\[c_{i, j+1} = \mathcal{H}_n (\mathfrak{m}, r_{i, j} G - c_{i, j} K_{i, j}, i, j)\]
- 	  Here we interpret references to \(c_{i, 1}\) as \(c_1\), see previous step	
+	 	\item build second half of sub-ring from connector: for \(j_i = 1, ..., \pi_i-1 \) generate random numbers \(r_{i, j_i} \in_R \mathbb{Z}_l\) and compute [we interpret references to $c_{i,1}$ as $c_1$]
+ 	\[c_{i, j_i+1} = \mathcal{H}_n (\mathfrak{m}, [r_{i, j_i} G - c_{i, j_i} K_{i, j_i}], i, j_i)\]
  	  
- 	  
- 	    \item set \(r_{i, \pi_i} = \alpha_i + k_{i, \pi_i} c_{i, \pi_{i}} \)
+ 	    \item tie sub-ring ends together: set $r_{i, \pi_i}$ such that $\alpha_i = r_{i, \pi_i} - c_{i, \pi_{i}} k_{i, \pi_i}$
 	 \end{enumerate} 
- 
  
 \end{enumerate}
 
-The signature will be
- \[\sigma = (c_1, r_{1, 1}, r_{1, 2}, ..., r_{1, m}, ..., r_{n, m} )  \]
+The signature is
+ \[\sigma = (c_1, r_{1, 1}, ..., r_{1, m_1}, r_{2,1} ..., r_{2,m_2}, ..., r_{n, m_n} )  \]
 
 
 \subsection*{Verification}
 
-As before, let \(\mathfrak{m}\) be the hash of the message to sign and the set of signing keys.
-
-The verification of a given signature is performed as follows:
+Given \(\mathfrak{m}\), $\mathcal{R}$, and $\sigma$, verification is performed as follows:
 
 \begin{enumerate}
 	
-	\item For \(i = 1, ..., n \) and \(j = 1, ..., m \) compute:
-	
+	\item For \(i = 1, ..., n \) and \(j_i = 1, ..., m_i \) build each ring:\\
 %	\[ c_{i, j+1} = \mathcal{H}_n (\mathfrak{m}, r_{i, j} G - c_{i, j} K_{i, j}, i, j) \]
-
 	\begin{align*}
-	   R'_{i, j+1} &= r_{i, j} G - c'_{i, j} K_{i, j} \\
-	   c'_{i, j+1} &= \mathcal{H}_n (\mathfrak{m}, R'_{i, j+1}, i, j) 
+	   L'_{i, j_i+1} &= r_{i, j_i} G - c'_{i, j_i} K_{i, j_i} \\
+	   c'_{i, j_i+1} &= \mathcal{H}_n (\mathfrak{m}, L'_{i, j_i+1}, i, j_i) 
 	\end{align*}
 	
 	Interpret any \(c'_{i, 1}\) as \(c_1\)
 	
-	\item Compute \(c'_1 = \mathcal{H}(R'_{1, m}, ..., R'_{n, m}) \)	
+	\item Compute the connector \(c'_1 = \mathcal{H}_n (L'_{1, m_1}, ..., L'_{n, m_n}) \)	
 	
 \end{enumerate}
 
-The signature will be valid if \(c'_1 = c_1\).
-
+The signature is valid if \(c'_1 = c_1\).
 
 
 
@@ -360,35 +332,20 @@ The signature will be valid if \(c'_1 = c_1\).
 
 
 \begin{enumerate}
-	\item For \(j \ne \pi_i\) and for all \(i\) we can readily see that \(c'_{i, j+1} = c_{i, j+1}\)
+	\item For \(j \ne \pi_i\) and for all \(i\) we can readily see that \(c'_{i, j_i+1} = c_{i, j_i+1}\)
 	
-	\item When \(j = \pi_i\), for all \(i \)
+	\item When \(j_i = \pi_i\), for all \(i \)
 	\begin{align*}
-	R'_{i, j+1} &= r_{i, j} G - c'_{i, j} K_{i, j} \\
-	            &= (\alpha_i + k_{i, \pi_i} c'_{i, \pi_{i}}) G - c'_{i, \pi_i} K_{i, \pi_i} \\
-	            &= \alpha_i G + k_{i, \pi_i} c'_{i, \pi_{i}} G - c'_{i, \pi_i} k_{i, \pi_i} G \\
-	            &= \alpha_i G 
+	L'_{i, \pi_i+1} &= r_{i, \pi_i} G - c'_{i, \pi_i} K_{i, \pi_i} \\
+	              &= (\alpha_i + k_{i, \pi_i} c_{i, \pi_i}) G - c'_{i, \pi_i} K_{i, \pi_i} \\
+	              &= \alpha_i G + k_{i, \pi_i} c_{i, \pi_{i}} G - c'_{i, \pi_i} k_{i, \pi_i} G \\
+	              &= \alpha_i G 
 	\end{align*}
-	In other words, \(c'_{i, \pi_i} = \mathcal{H}_n(\mathfrak{m}, \alpha_i G, i, \pi_i) = c_{i, \pi+1}\).
+	In other words, \(c'_{i, \pi_i+1} = \mathcal{H}_n(\mathfrak{m}, \alpha_i G, i, \pi_i) = c_{i, \pi_i+1}\).
 	
 \end{enumerate}
 
-Therefore we can conclude that the verification step identifies correctly valid signatures.
-
-
-
-
-
-
-
-
-
-
-
-
-
-
- 
+Therefore we can conclude the verification step identifies valid signatures.
 
 
 

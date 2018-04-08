@@ -13,23 +13,15 @@
 We present in this chapter a dump from a real Monero transaction of type {\tt RCTTypeFull}, 
 together with explanatory notes for relevant fields.
 
-The dump was obtained executing command {\tt print\_tx <TransactionID>} in the {\tt monerod} daemon 
-run in non-detached mode.
-The first line printed shows the actual command run, which the interested reader can use to replicate our results.
+The dump was obtained executing command {\tt print\_tx <TransactionID>} in the {\tt monerod} daemon run in non-detached mode. The first line printed shows the actual command run, which the interested reader can use to replicate our results.
 \\
 
-For editorial reasons we have shortened long hexadecimal chains, presenting only the beginning and end
-as in {\tt 0200010c7f[...]409}.
+For editorial reasons we have shortened long hexadecimal chains, presenting only the beginning and end as in {\tt 0200010c7f[...]409}.
 \\
 
-Component {\tt rctsig\_prunable}, as indicated by its name, is in theory {\sl prunable} from the blockchain. 
-That is, once a block  has been consensuated
-and the current chain length rules out all possibilities of double-spending attacks, this whole field could be pruned.
-This is something that has not yet been done in the Monero blockchain, but it is nevertheless a possibility.
-This would yield considerable space savings. 
+Component {\tt rctsig\_prunable}, as indicated by its name, is in theory {\sl prunable} from the blockchain. That is, once a block has been consensuated and the current chain length rules out all possibilities of double-spending attacks, this whole field could be pruned. This is something that has not yet been done in the Monero blockchain, but it is nevertheless a possibility. This would yield considerable space savings. 
 
-Key images and ring keys are stored separately, in the non-prunable area of transactions.
-Indeed, these components are essential for detecting double-spend attacks and can not be pruned away.
+Key images and ring keys are stored separately, in the non-prunable area of transactions. These components are essential for detecting double-spend attacks and can’t be pruned away.
 \\
 
 Our sample transaction has 1 input and 2 outputs.
@@ -110,33 +102,30 @@ Found in blockchain at height 1467685
 \section*{Transaction components}
 	
 \begin{itemize}
-	\item {\tt vin} (line 7-14) - List of inputs
-	\item {\tt amount} (line 9) - Deprecated amount field for type 1 transactions
-	\item {\tt key\_offset} (line 10) - Relative offsets respect to previous block of ring components, spent output and mixin outputs. As an illustration, 799048 is to be interpreted as the 799048\nth transaction counting backwards from
-	the current transaction and starting from the previous block
-	\item {\tt k\_image} (line 12) - Key image \(\tilde{K_j}\) from Section \ref{sec:MLSAG}
-	\item {\tt vout} (lines 16-27) - List of outputs
+	\item {\tt version} (line 3) - Transaction format version, `2' corresponds to RingCT.
+	\item {\tt vin} (line 7-14) - List of inputs (there’s only one)
+	\item {\tt amount} (line 9) - Deprecated (legacy) amount field for type 1 transactions
+	\item {\tt key\_offset} (line 10) - Relative offsets with respect to most recent block for ring components: spent output, and mixin outputs. As an illustration, 799048 is to be interpreted as the 799048\nth transaction counting backwards, starting from within the most recent block. This allows verifiers to find ring member keys and commitments in the blockchain, and makes it obvious those members are legitimate.
+	\item {\tt k\_image} (line 12) - Key image \(\tilde{K_j}\) from Section \ref{sec:MLSAG}, where $m = j = 1$ for 1 input.
+	\item {\tt vout} (lines 16-27) - List of outputs (there are two)
 	\item {\tt amount} (line 17) - Deprecated amount field for type 1 transactions
-	\item {\tt key} (line 19) - One-time destination key as described in Section \ref{sec:one-time-addresses}
-	\item {\tt extra} (lines 28-32) - Miscellaneous data, including the Transaction key, or share secret \(rG\) of
-	    Section \ref{sec:one-time-addresses}
+	\item {\tt key} (line 19) - One-time destination key for output $t$ as described in Section \ref{sec:one-time-addresses} Also known as the stealth address.
+	\item {\tt extra} (lines 28-32) - Miscellaneous data, including the {\em transaction public key}, i.e. the share secret $r G$ of Section  \ref{sec:one-time-addresses}
 	\item {\tt rct\_signatures} (lines 33-45) - First part of signature data
-	\item {\tt type} (line 34) - Signature type, in this case {\tt RCTTypeFull}
+	\item {\tt type} (line 34) - Signature type; {\tt RCTTypeFull} is type 1.
 	\item {\tt txnFee} (line 35) - Transaction fee in clear, in this case 0.026 XMR
-	\item {\tt ecdhInfo} (lines 36-42) - Encrypted mask and amount of each of the outputs
-	\item {\tt mask} (line 37) - Field {\sl mask} as described  in Section \ref{amount-commitments}
-    \item {\tt amount} (line 38) - Field {\sl amount} as described in Section \ref{amount-commitments}
-    \item {\tt outPk} (lines 43-44) - Output commitments
+	\item {\tt ecdhInfo} (lines 36-42) - ‘elliptic curve diffie-hellman info’: Encrypted mask and amount of each of the outputs $t \in {1, ..., p}$, here $p = 2$
+	\item {\tt mask} (line 37) - Field {\sl mask} at $t = 1$ as described in Section \ref{amount-commitments}
+    \item {\tt amount} (line 38) - Field {\sl amount} at $t = 1$ as described in Section \ref{amount-commitments}
+    \item {\tt outPk} (lines 43-44) - Commitments for each output, Section \ref{sec:commitments-to-zero}
     
-    \item {\tt rctsig\_prunable} (lines 46-67) - Second part of signatures
-    \item {\tt rangeSigs} (lines 47-53) - Range proofs for output commitments
-    \item {\tt asig} (line 48) - Borromean signature of the amount, see Section \ref{range-proofs-space} 
-    \item {\tt Ci} (line 49) -  Borromean commitments (ring keys), as described in Section \ref{full-signature}. As
-    hinted in Section \ref{range-proofs-space} only the \(K_j\) need to be stored, as the values \(K_j - 2^j H\)
-    can be easily derived by the network.
+    \item {\tt rctsig\_prunable} (lines 46-67) - Second part of signature data
+    \item {\tt rangeSigs} (lines 47-53) - Range proofs for output $t \in {1, ..., p}$ commitments 
+    \item {\tt asig} (line 48) - Borromean signature terms for the range proof of output $t = 1$ (includes $c_1$ and all $r$), see Section \ref{range-proofs-space} 
+    \item {\tt Ci} (line 49) -  Borromean commitments (ring keys) for the range proof on output $t = 1$, as described in Section \ref{full-signature}. As explained in Section \ref{range-proofs-space} only the commitments $C_i$ need to be stored, as the values $C_i -2^i H$ can be easily derived by verifiers. 
     \item {\tt MGs} (lines 54-66) - Remaining elements of the MLSAG signature
     \item {\tt ss} (lines 55-64) - Components \(r_{i,j}\) from the MLSAG signature
-      \[\sigma(\mathfrak{m}) = (c_1, r_{1, 1}, ..., r_{n, 1}, ..., r_{1, m}, ..., r_{n, m}, \tilde{K}_1, ...,  \tilde{K}_m) \]
+      \[\sigma(\mathfrak{m}) = (c_1, r_{1, 1}, ..., r_{1, m+1}, ..., r_{v+1, 1}, ..., r_{v+1, m+1}, \tilde{K}_1, ...,  \tilde{K}_m) \]
     \item {\tt cc} (line 65) - Component \(c_1\) from aforementioned MLSAG signature
 	
 \end{itemize}
@@ -147,8 +136,7 @@ Found in blockchain at height 1467685
 \label{appendix:RCTTypeSimple}
 
 
-In this section we show the structure of a sample transaction of type {\tt RCTTypeSimple}.
-The transaction has 4 inputs and 2 outputs.
+In this section we show the structure of a sample transaction of type {\tt RCTTypeSimple}. The transaction has 4 inputs and 2 outputs.
 
 
 
@@ -287,15 +275,12 @@ Found in blockchain at height 1469563
 
 \section*{Transaction components}
 
-What follows is a short explanation of most important elements in transactions.
-We do only mention components that are specific or differ from the previous {\tt RCTTypeFull} transaction type.
+What follows is a short explanation of the most important elements in this type of transaction. We only mention components that are specific to, or differ from, the previous {\tt RCTTypeFull} transaction type.
 
 
 \begin{itemize}
 	\item {\tt type} (line 53) - Signature type, in this case the value 2, corresponding to {\tt RCTTypeSimple} transactions
-    \item {\tt pseudoOuts} (lines 55-58) - Pseudo-outputs used for commitments to zero against the real previous outputs, 
-       as described in Section \ref{RCTTypeSimple-commitments}. Please recall that the sum of these commitments will
-       equal the sum of the 2 output commitments of the transaction. 
+    \item {\tt pseudoOuts} (lines 55-58) - Pseudo-output commitments $C'^a_j$, as described in Section  \ref{RCTTypeSimple-commitments}. Please recall that the sum of these commitments will equal the sum of the 2 output commitments of this transaction (plus the transaction fee $f H$).
 \end{itemize}
 
 \end{appendices}
