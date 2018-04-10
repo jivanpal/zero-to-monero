@@ -47,7 +47,7 @@ These hash functions will be applied to integers, strings, curve points, or comb
 
 A finite field \(\mathbb{F}_q\), where \(q\) is a prime number greater than 3, is the field formed by the set \(\{0, 1, 2, ..., q-1\}\). Arithmetic operations \((+,  \cdot)\) and the unary operation $(-)$ are calculated \( \pmod q\).\footnote{\label{modulus_note}``calculated \( \pmod q\)" means \( \pmod q\) is performed on any instance of an arithmetic operation between two field elements, or negation of a single field element. For example, given a prime field \(\mathbb{F}_p\) with $p = 29$, $17+20=8$ because $37 \pmod{29} = 8$. Also, $-13 = (-13) \pmod{29} = 16$.
 
-The (positive) modulus is here defined for $a \pmod b = c$ as $a=bx+c$, where $0\leq{c}<{b}$ and $x$ is a signed integer which gets discarded. Imagine a number line. Stand at point $a$. Walk toward zero with each $\text{step} =b$, until you reach an integer $\geq{0}$ and $<b$. That is $c$.}
+The (positive) modulus is here defined for $a \pmod b = c$ as $a=bx+c$, where $0\leq{c}<{b}$ and $x$ is a signed integer which gets discarded. Imagine a number line. Stand at point $a$. Walk toward zero with each $\text{step} =b$ until you reach an integer $\geq{0}$ and $<b$. That is $c$.}
 
 
 Typically, elliptic curves are defined as the set of points \((x, y)\) satisfying a {\em Weierstraß} equation for a given $(a,b)$ pair\footnote{\label{notation1}Notation: the phrase $a \in \mathbb{F}$ means $a$ is some element in the field $\mathbb{F}$.}:
@@ -84,7 +84,7 @@ It turns out that elliptic curves have {\em abelian group} structure\footnote{\l
 
 Each point $P$ in EC can generate a subgroup of order (size) $u$ out of some of the other points in EC using multiples of itself. For example, some point $P$’s subgroup might have order 5 and contain the points $(0P, P, 2P, 3P, 4P)$, each of which is in EC. At $5P$ the so-called {\em point-at-infinity} appears, which is like the `zero’ position on an EC and has coordinates $(0, 1)$. 
 
-Conveniently, $0P = 5P$ and $5P + P = P$. This means the subgroup is {\em cyclical}\footnote{\label{cyclical_note}Cyclical subgroups mean, for $P$'s subgroup with order $u$ and any integer $n$, $n P = [n \pmod{u}] P$.}. All $P$ in EC generate a cyclical subgroup. If $P$ generates a subgroup whose order\footnote{\label{find_order_note}To find the order, $u$, of $P$'s subgroup:
+Conveniently, $0P = 5P$ and $5P + P = P$. This means the subgroup is {\em cyclic}\footnote{\label{cyclical_note}Cyclic subgroup means, for $P$'s subgroup with order $u$ and any integer $n$, $n P = [n \pmod{u}] P$.}. All $P$ in EC generate a cyclic subgroup. If $P$ generates a subgroup whose order\footnote{\label{find_order_note}To find the order, $u$, of $P$'s subgroup:
 \begin{enumerate}
     \item Find $N$ (e.g. use {\em Schoof's algorithm}) 
     \item Find all the divisors of $N$

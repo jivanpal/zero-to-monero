@@ -223,9 +223,9 @@ Which works because this is a commitment to zero:
 
 \subsection{Avoiding double-spending}
 
-An MLSAG signature (Section \ref{sec:MLSAG}) contains images \(\tilde{K}_{\pi, j}\) of private keys \(k_{\pi, j}\). An important property in any cryptographic signature scheme is that it should be unforgeable with non-negligible probability. Therefore, to all practical effects, we can assume a signature’s key images must have been deterministically produced from legitimate private keys.
+An MLSAG signature (Section \ref{sec:MLSAG}) contains images \(\tilde{K}_{j}\) of private keys \(k_{\pi, j}\). An important property in any cryptographic signature scheme is that it should be unforgeable with non-negligible probability. Therefore, to all practical effects, we can assume a signature’s key images must have been deterministically produced from legitimate private keys.
 	
-The network need only verify that key images included in MLSAG signatures (corresponding to inputs and calculated as $\tilde{K}^o_{\pi,j} = k^o_{\pi,j} \mathcal{H}_p(K^o_{\pi,j})$) have not appeared before in other transactions. If they have, then we can be sure we are witnessing an attempt to spend twice a previously received output $C^a_{\pi,j}$, addressed to $K_{\pi,j}^o$.
+The network need only verify that key images included in MLSAG signatures (corresponding to inputs and calculated as $\tilde{K}^o_{j} = k^o_{\pi,j} \mathcal{H}_p(K^o_{\pi,j})$) have not appeared before in other transactions.\footnote{Verifiers must also check the key image is a member of the generator's subgroup (recall Section \ref{elliptic_curves_section}) by seeing if $l \tilde{K}^o_{j} = 0$, as it is sometimes possible to add an EC point with subgroup order equal to a multiple of $l$ to the key image and still produce a verifiable signature. See \cite{key-image-bug} for more details.} If they have, then we can be sure we are witnessing an attempt to spend twice a previously received output $C^a_{\pi,j}$, addressed to $K_{\pi,j}^o$.
 
 If someone tries to spend $C^a_{\pi,j}$ twice, they will reveal the index $\pi$ for both transactions where it appears. This has two effects: 1) all outputs at index $\pi$ in the first transaction are revealed as its real inputs, and 2) all outputs at index $\pi$ in the second transaction are revealed as not having been spent before. The second is a problem even considering miners would reject the double-spend transaction.
 
@@ -333,7 +333,7 @@ She can then sign using the following ring:
 &... \\
 &\{ K^o_{\pi, j}, (C^a_{\pi, j} - C'^a_{\pi, j})\}, \\
 &... \\
-&\{ K^o_{v+1, j}, (C_{v+1, j} - C'^a_{v+1, j})\}\}
+&\{ K^o_{v+1, j}, (C_{v+1, j} - C'^a_{\pi, j})\}\}
 \end{align*}
 
 
