@@ -66,10 +66,9 @@ Bob has private/public keys $(k_B^v, k_B^s)$ and $(K_B^v, K_B^s)$, and Alice kno
 While Alice can calculate the public key $K^o$ for the address, she can not compute the corresponding private key $k^o$, since it would require either knowing Bob’s spend key $k_B^s$, or solving the discrete logarithm problem for $K_B^s = k_B^s G$, which we assume to be hard. As will become clear later in this chapter, without $k^o$ Alice can't compute the output's key image, so she can never know for sure if Bob spends the output she sent him.
 \\
 
-While a third party with Bob’s {\em view key} can verify an output is addressed to Bob, without knowledge of the {\em spend key} this third party would not be able to spend that output. He would not be able to sign with the private key $k^o$ of the one-time address.
+While a third party with Bob’s {\em view key} can verify an output is addressed to Bob, without knowledge of the {\em spend key} this third party would not be able to spend that output nor know when it has been spent. They would not be able to sign with the private key $k^o$ of the one-time address, nor create that address's key image.
 
 Such a third party could be a trusted custodian, an auditor, a tax authority, etc. Somebody who could have read access to the user’s transaction history, without any further rights. This third party would also be able to decrypt the amounts of Section \ref{amount-commitments}.
-\\
 
 
 \subsection{Multi-output transactions}
@@ -197,6 +196,10 @@ With this observation made we can see the utility of $z G$. All commitment terms
 	\(\{K_{\pi,1}^o,...,K_{\pi,m}^o, (\sum\limits_j C_{\pi, j}^a - \sum\limits_t C^b_{t})\}\)
 	are \(k_{\pi,1}^o,...,k_{\pi,m}^o, z\), which are known to the sender. 
 	MLSAG in this scenario does not use a key image for the commitment to zero $z G$. This means calculating and verifying the signature excludes the term $r_{i,m+1} \mathcal{H}_p(K_{i,m+1}) + c_i \tilde{K}_z$.
+	
+	The message $\mathfrak{m}$ signed in the input MLSAG is essentially a hash of all transaction information {\em except} for the MLSAG signature itself.\footnote{\label{MLSAG_message}The actual message is $\mathfrak{m} = \mathcal{H}(\mathcal{H}(tx\textunderscore prefix),\mathcal{H}(ss),\mathcal{H}(\text{range proof signatures}))$ where:\\
+	$tx\textunderscore prefix = $\{transaction version (i.e. ringCT = 2), inputs \{key offsets, key image\}, outputs \{one-time addresses\}\}\\ 
+	$ss = $\{signature type (simple vs full), transaction fee, pseudo output commitments for inputs, ecdhInfo (masks and amounts), output commitments\}. See Appendices \ref{appendix:RCTTypeFull} \& \ref{appendix:RCTTypeSimple} regarding this terminology.} This ensures transactions are tamper-proof from the perspective of both transaction authors and verifiers.
 	
 	\item[Range proofs for outputs]
 	To avoid the amount ambiguity of outputs described in Section  \ref{sec:range_proofs}, the sender must also employ the Borromean signature scheme of Section \ref{sec:borromean} to sign amount ranges for each output $t \in {1, ..., p}$.
@@ -342,7 +345,9 @@ Alice will know the private key $k^o_{\pi,j}$ for $K^o_{\pi,j}$ as well as the o
 
 Each input in {\tt RCTTypeSimple} transactions is signed individually, applying the scheme described in Section \ref{full-signature}, but using rings like \(\mathcal{R}_j\) as defined above.
 
-The advantage of signing inputs individually is that the set of real inputs and commitments to zero are not placed at the same index, according to the formulation of the MLSAG algorithm. Therefore, even if the origin of one input became traceable, the rest of the inputs would not.
+The advantage of signing inputs individually is that the set of real inputs and commitments to zero need not be placed at the same index $\pi$, as they are in the MLSAG algorithm. This means even if one input's origin became identifiable, the other inputs' origins would not.
+
+The message $\mathfrak{m}$ signed by each input is essentially the same as for $\tt RCTTypeFull$ transactions (see Footnote \ref{MLSAG_message}), except it includes pseudo-output commitments for the inputs. Only one message is produced, and each input MLSAG signs it.
 
 
 \subsection{Space Requirements}
@@ -394,5 +399,5 @@ To summarize this chapter we present the main content of a transaction, reorgani
         \end{itemize}
     \end{itemize}
     \item \underline{Transaction fee}: communicated in clear text multiplied by $10^{12}$, so a fee of 1.0 would be recorded as 1000000000000
-    \item \underline{Extra}: includes the transaction public key $r G$, or, if more than one output is directed to a subaddress, $r_t K^{s,i}_t$ for each subaddress'd output $t$ and $r_t G$ for each normal address'd output $t$
+    \item \underline{Extra}: includes the transaction public key $r G$, or, if at least one output is directed to a subaddress, $r_t K^{s,i}_t$ for each subaddress'd output $t$ and $r_t G$ for each normal address'd output $t$
 \end{itemize}

@@ -1,0 +1,21 @@
+\chapter{Multisignatures}
+\label{chapter:multisignatures}
+
+-N of N, (N-1) of N
+-multisignature does not change the transaction schemes
+-essentially collaborative transaction signing on transaction outputs stealth-addressed to an aggregated key
+
+-naive aggregation threshold heuristic: basic sum of keys
+    -drawbacks: an observer could easily recognize an aggregated public key as sum of other public keys, a sub-threshold signer could cancel other signers' key components
+    -modifications: indistinguishable key aggregation
+
+-LSTAG: basic demonstration
+-MLSTAG for Monero: walk through signature creation colloquially
+-Communication rounds: consolidate multisig cooperation into three steps describing encoding etc:
+    1. Build multisig public address (merge)
+    2. Seed signatures: key image components, alpha components, and entropy components r
+    3. Close signatures: final entropy components for r = alpha - rk*
+    
+-encoding and decoding messages with shared secrets, necessary for communication between coalition members
+
+-aggregate key and directed acyclic graph for generalized access structures to signing rights
