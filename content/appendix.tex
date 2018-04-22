@@ -110,7 +110,7 @@ Found in blockchain at height 1467685
 	\item {\tt vout} (lines 16-27) - List of outputs (there are two)
 	\item {\tt amount} (line 17) - Deprecated amount field for type 1 transactions
 	\item {\tt key} (line 19) - One-time destination key for output $t$ as described in Section \ref{sec:one-time-addresses} Also known as the stealth address.
-	\item {\tt extra} (lines 28-32) - Miscellaneous data, including the {\em transaction public key}, i.e. the share secret $r G$ of Section  \ref{sec:one-time-addresses}
+	\item {\tt extra} (lines 28-32) - Miscellaneous data, including the {\em transaction public key}, i.e. the share secret $r G$ of Section  \ref{sec:one-time-addresses}, and encoded payment IDs from Section \ref{sec:integrated-addresses}
 	\item {\tt rct\_signatures} (lines 33-45) - First part of signature data
 	\item {\tt type} (line 34) - Signature type; {\tt RCTTypeFull} is type 1.
 	\item {\tt txnFee} (line 35) - Transaction fee in clear, in this case 0.026 XMR

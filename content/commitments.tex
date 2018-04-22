@@ -32,28 +32,7 @@ In the case of Monero, $H = \mathcal{H}_p(G)$.\footnote{\label{hashtopoint_note}
 
 
 
-%\section{Commitments in a blockchain}
-%
-%Assume that Alice intends to transfer a certain amount \(a\) to Bob as a payment for an item
-%she bought from him. She wants to publish this payment in a public ledger, yet she doesn't
-%want to publicize the exact amount, only that she made this payment.
-%
-%In this situation, Alice and Bob could exchange a Diffie-Hellman secret, and use it
-%as basis for the blinding factor \(xG\). 
-%A simple algorithm for this could be:
-%
-%Let \(K_B\) be Bob's public key.
-%
-%\begin{enumerate}
-%	\item Alice generates a random number \(r\). The shared secret will be \(r K_B\)
-%	\item Alice calculates the commitment for \(a\) as \(C(a) = \mathcal{H}_n(r K_B) G + a H \)
-%	\item Alice publishes \(C(a)\) and \(r G\) to the ledger
-%	\item Bob will be able to compute the shared secret \(r K_B = k_B r G\). Therefore he will
-%	also be able to compute the blinding factor, whereby he will know whether the commitment
-%	is to the amount he expects.
-%\end{enumerate}
-%
-%
+
 \section{Monero commitments}
 \label{sec:pedersen_monero}
 
