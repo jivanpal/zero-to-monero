@@ -13,7 +13,7 @@
 We present in this chapter a dump from a real Monero transaction of type {\tt RCTTypeFull}, 
 together with explanatory notes for relevant fields.
 
-The dump was obtained executing command {\tt print\_tx <TransactionID>} in the {\tt monerod} daemon run in non-detached mode. The first line printed shows the actual command run, which the interested reader can use to replicate our results.
+The dump was obtained executing command {\tt print\_tx <TransactionID>} in the {\tt monerod} daemon run in non-detached mode. {\tt <TransactionID>} is a hash of the transaction. The first line printed shows the actual command run, which the interested reader can use to replicate our results.% see chapter 7 blockchain on TransactionID
 \\
 
 For editorial reasons we have shortened long hexadecimal chains, presenting only the beginning and end as in {\tt 0200010c7f[...]409}.
@@ -102,7 +102,9 @@ Found in blockchain at height 1467685
 \section*{Transaction components}
 	
 \begin{itemize}
-	\item {\tt version} (line 3) - Transaction format version, `2' corresponds to RingCT.
+    \item (line 2) - {\tt print\_tx} reports where it found the transaction.
+    \item (line 3) - Raw transaction data with no readability formatting.
+	\item {\tt version} (line 5) - Transaction format version, `2' corresponds to RingCT.
 	\item {\tt vin} (line 7-14) - List of inputs (there’s only one)
 	\item {\tt amount} (line 9) - Deprecated (legacy) amount field for type 1 transactions
 	\item {\tt key\_offset} (line 10) - Relative offsets with respect to most recent block for ring components: spent output, and mixin outputs. As an illustration, 799048 is to be interpreted as the 799048\nth transaction counting backwards, starting from within the most recent block. This allows verifiers to find ring member keys and commitments in the blockchain, and makes it obvious those members are legitimate.
@@ -110,7 +112,7 @@ Found in blockchain at height 1467685
 	\item {\tt vout} (lines 16-27) - List of outputs (there are two)
 	\item {\tt amount} (line 17) - Deprecated amount field for type 1 transactions
 	\item {\tt key} (line 19) - One-time destination key for output $t$ as described in Section \ref{sec:one-time-addresses} Also known as the stealth address.
-	\item {\tt extra} (lines 28-32) - Miscellaneous data, including the {\em transaction public key}, i.e. the share secret $r G$ of Section  \ref{sec:one-time-addresses}, and encoded payment IDs from Section \ref{sec:integrated-addresses}
+	\item {\tt extra} (lines 28-32) - Miscellaneous data, including the {\em transaction public key}, i.e. the share secret $r G$ of Section  \ref{sec:one-time-addresses} %[deprecated], and payment IDs and encoded payment IDs from Section \ref{sec:integrated-addresses}
 	\item {\tt rct\_signatures} (lines 33-45) - First part of signature data
 	\item {\tt type} (line 34) - Signature type; {\tt RCTTypeFull} is type 1.
 	\item {\tt txnFee} (line 35) - Transaction fee in clear, in this case 0.026 XMR

@@ -3,16 +3,26 @@
 
 
 
-
+https://cryptonote.org/standards/
 
 -proof of work: merkle trees, nonce, blockhash, hash algorithm
-    -difficulty 
+    -difficulty https://monero.stackexchange.com/questions/7975/how-does-the-difficulty-adjustment-for-monero-work
+    https://cryptonote.org/cns/cns010.txt
+    -PoW hash algorithm originally cryptonight https://cryptonote.org/cns/cns008.txt
+    updated https://github.com/monero-project/monero/pull/3253/files
+    -merkle tree https://cryptonote.org/cns/cns003.txt [note: can prunable section be replaced with its hash? function calculate_transaction_hash answer is yes. Transaction hash is basically the message signed by MLSAGs except instead of H(range proofs) it is H(prunable) ie H(range proof signatures, MLSAG signatures)]
     
 -structure of blockchain
+https://monero.stackexchange.com/questions/3958/what-is-the-format-of-a-block-in-the-monero-blockchain/6461#6461
+    -appendix C.1, block header and miner transaction, appendix C.2 genesis block
 
 -mining
-    -consensus mechanism
-    -block rewards (emission) and penalty function
-    -fees
-    -mempool
+    -consensus mechanism (largest cumulative difficulty)
+        -for chain splits, each fork continues until one branch has higher cumulative difficulty
+    -block rewards (emission) and penalty function https://www.reddit.com/r/Monero/comments/512kwh/useful_for_learning_about_monero_coin_emission/d78tpgi/
+        -'base transaction' https://cryptonote.org/cns/cns003.txt
+    -fees -> summed into block reward and published in the miner tx(create_miner_tx function)
+    -mempool https://cryptonote.org/cns/cns009.txt
 
+-discussion of ring size/verification times
+https://github.com/monero-project/monero/issues/3035
