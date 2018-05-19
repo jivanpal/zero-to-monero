@@ -4,11 +4,11 @@ This is a comprehensive conceptual (and technical) explanation of Monero. I will
 
 The first edition is still in progress, but the pdf here already contains a lot of valuable information.
 
-Complete content:
+Complete content:  
 -Monero transactions (first edition)
 
-Future content:
--rewritten ch.2 on basic concepts (first edition)
--multisignatures (first edition)
--Monero blockchain (first edition)
+Future content:  
+-rewritten ch.2 on basic concepts (first edition)  
+-multisignatures (first edition)  
+-Monero blockchain (first edition)  
 -bulletproofs (second edition)
