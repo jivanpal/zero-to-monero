@@ -6,7 +6,7 @@ The first edition is still in progress, but the pdf here already contains a lot 
 https://www.pdf-archive.com/2018/05/21/zero-to-monero-first-edition-v0-14/zero-to-monero-first-edition-v0-14.pdf
 
 Complete content:  
--Monero transactions (first edition)
+-Monero transactions (first edition)  
 -multisignatures (first edition)
 
 Future content:  
