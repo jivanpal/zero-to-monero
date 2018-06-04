@@ -1,16 +1,15 @@
-
-
 \chapter{Monero Transactions}
 \label{chapter:transactions}
 
 \section{User keys}
+\label{sec:user-keys}
 
-Unlike Bitcoin, Monero users have two sets of private/public keys, \((k^v, K^v)\) and \( (k^s, K^s) \), generated as described in Section \ref{ec:keys}.\footnote{It is currently most common for the view key $k^v$ to equal $\mathcal{H}_n(k^s)$. This means a person only needs to save their spend key $k^s$ in order to access all of the outputs they own. The spend key is typically represented as a series of 25 words (where the 25th word is a checksum). Other, less popular methods include: generating $k^v$ and $k^s$ as separate random numbers, or generating a random 12-word mnemonic $a$, where $k^s = sc\textunderscore reduce32(\mathit{Keccak}(a))$ and $k^v = sc\textunderscore reduce32(\mathit{Keccak}(\mathit{Keccak}(a)))$. \cite{luigi-address}}
+Unlike Bitcoin, Monero users have two sets of private/public keys, \((k^v, K^v)\) and \( (k^s, K^s) \), generated as described in Section \ref{ec:keys}.
 
 The {\em address} of a user is the pair of public keys \((K^v, K^s)\). Her private keys will be the corresponding pair \( (k^v, k^s) \).
 \\
 
-Using two sets of keys allows function segregation. The rationale will become clear later in this chapter, but for the moment let us call private key $k^v$ the {\em view key}, and $k^s$ the {\em spend key}. A person can use their view key to determine if an output is addressed to them, and their spend key will allow them to send that output in a transaction.
+Using two sets of keys allows function segregation. The rationale will become clear later in this chapter, but for the moment let us call private key $k^v$ the {\em view key}, and $k^s$ the {\em spend key}. A person can use their view key to determine if an output is addressed to them, and their spend key will allow them to send that output in a transaction (and retroactively figure out it has been spent).\footnote{It is currently most common for the view key $k^v$ to equal $\mathcal{H}_n(k^s)$. This means a person only needs to save their spend key $k^s$ in order to access all of the outputs they own. The spend key is typically represented as a series of 25 words (where the 25th word is a checksum). Other, less popular methods include: generating $k^v$ and $k^s$ as separate random numbers, or generating a random 12-word mnemonic $a$, where $k^s = sc\textunderscore reduce32(\mathit{Keccak}(a))$ and $k^v = sc\textunderscore reduce32(\mathit{Keccak}(\mathit{Keccak}(a)))$. \cite{luigi-address}}
 
 
 
@@ -26,54 +25,98 @@ Bob has private/public keys $(k_B^v, k_B^s)$ and $(K_B^v, K_B^s)$, and Alice kno
 
 
 \begin{enumerate}
-	\item Alice generates a random number $r$ such that $1 < r < l$, and calculates the one-time public key $K^o  = \mathcal{H}_n(r K_B^v)G + K_B^s$ 
+	\item Alice generates a random number $r$ such that $1 < r < l$, and calculates the one-time public key $K^o  = \mathcal{H}_n(r K_B^v)G + K_B^s$.
 
 	\item Alice sets $K^o$ as the addressee of the payment, adds the value $r G$ to the transaction data and submits it to the network.
 	
 	\item 	Bob receives the data and sees the values $r G$ and $K^o$. He can calculate $k_B^v r G = r K_B^v$. He can then calculate $K'^s_B = K^o - \mathcal{H}_n(r K_B^v)G$. When he sees that $K'^s_B = K_B^s$, he knows the transaction is addressed to him.
 	
-	The private key $k_B^v$ is called the {\em view key} because anyone who has it (and Bob’s public spend key $K_B^s$) can calculate $K'^o$ for every transaction output in the network, and ‘view’ which ones are addressed to Bob.
+	The private key $k_B^v$ is called the {\em view key} because anyone who has it (and Bob’s public spend key $K_B^s$) can calculate $K'^o$ for every transaction output in the blockchain (record of transactions), and ‘view’ which ones are addressed to Bob.
 	
-	\item The one-time keys for the output are
+	\item The one-time keys for the output are:
 	\begin{align*}
 		K^o &= \mathcal{H}_n(r K_B^v)G + k_B^s G = (\mathcal{H}_n(r K_B^v) + k_B^s)G  \\ 
 		k^o &= \mathcal{H}_n(r K_B^v) + k_B^s
 	\end{align*}
 \end{enumerate}
 
-While Alice can calculate the public key $K^o$ for the address, she can not compute the corresponding private key $k^o$, since it would require either knowing Bob’s spend key $k_B^s$, or solving the discrete logarithm problem for $K_B^s = k_B^s G$, which we assume to be hard. As will become clear later in this chapter, without $k^o$ Alice can't compute the output's key image, so she can never know for sure if Bob spends the output she sent him.
+While Alice can calculate the public key $K^o$ for the address, she can not compute the corresponding private key $k^o$, since it would require either knowing Bob’s spend key $k_B^s$, or solving the discrete logarithm problem for $K_B^s = k_B^s G$, which we assume to be hard. As will become clear later in this chapter, without $k^o$ Alice can't compute the output's key image, so she can never know for sure if Bob spends the output she sent him.\footnote{Imagine Alice produces two transactions, each containing the same one-time output address $K^o$ that Bob can spend. Since $K^o$ only depends on $r$ and $K_B^v$, there is no reason she can't do it. Bob can only spend one of those outputs because each stealth address only has one key image, so if he isn't careful Alice might trick him. She could make transaction 1 with a lot of money for Bob, and later transaction 2 with a small amount for Bob. If he spends the money in 2, he can never spend the money in 1. In fact, no one could spend the money in 1, effectively `burning' it. Monero wallets have been designed to ignore the smaller amount in this scenario.}
 \\
 
 A third party with Bob’s {\em view key} can verify an output is addressed to Bob, yet without knowledge of the {\em spend key} this third party would not be able to spend that output nor know when it has been spent. They would not be able to sign with the private key $k^o$ of the one-time address, nor create that address' key image.
 
 Such a third party could be a trusted custodian, an auditor, a tax authority, etc. Somebody who could be allowed read access to the user’s transaction history, without any further rights. This third party would also be able to decrypt the amounts of Section \ref{amount-commitments}.
 
-\newpage
+
 \subsection{Multi-output transactions}
 \label{sec:multi_out_transactions}
 
 Most transactions will contain more than one output. If nothing else, to transfer `change’ back to the sender.
 
-Monero senders generate only one random value $r$. The value $r G$ is normally known as the {\em transaction public key} and is published in the blockchain.
+Monero senders generate only one random value $r$. The value $r G$ is normally known as the {\em transaction public key} and is published in the blockchain.\\
 
-To ensure that all output addresses in a transaction with $p$ outputs are different even in cases where the same addressee is used twice, Monero uses an output index. Every output from a transaction has an index $t \in {1, ..., p}$. By appending this value to the shared secret before hashing it, one can ensure the resulting stealth addresses are unique:\\
+To ensure that all output addresses in a transaction with $p$ outputs are different even in cases where the same addressee is used twice, Monero uses an output index. Every output from a transaction has an index $t \in \{1, ..., p\}$. By appending this value to the shared secret before hashing it, one can ensure the resulting stealth addresses are unique:\\
 \begin{align*}
   K_t^o &= \mathcal{H}_n(r K_t^v, t)G + K_t^s = (\mathcal{H}_n(r K_t^v, t) + k_t^s)G  \\ 
   k_t^o &= \mathcal{H}_n(r K_t^v, t) + k_t^s
 \end{align*} 
 
+\section{Subaddresses}
+\label{sec:subaddresses}
+
+Monero users can generate subaddresses from each address \cite{MRL-0006}. Funds sent to a subaddress can be viewed and spent using its main address’ view and spend keys. By analogy: an online bank account may have multiple balances corresponding to credit cards and deposits, yet they are all accessible and spendable from the same point of view – the account holder.\\
+
+Subaddresses are convenient for receiving funds to the same place when a user doesn’t want to link his activities together by publishing/using the same address. As we will see, an observer would have to solve the DLP in order to determine a given subaddress is derived from any particular address \cite{MRL-0006}.
+
+They are also useful for differentiating between received outputs. For example, if Alice wants to buy an apple from Bob on a Tuesday, Bob could write a receipt describing the purchase and make a subaddress for that receipt, then ask Alice to use that subaddress when she sends him the money. This way Bob can associate the money he receives with the apple he sold. We explore another way to distinguish between received outputs in the next section.%\footnote{Before subaddresses were implemented in April 2018, the Monero developers supported a method called payment IDs, which allowed receivers to differentiate between owned outputs. Payment IDs were text strings included in a transaction's `extra', miscellaneous, data. Recipients could ask senders to include the payment IDs when writing a transaction. Payment IDs could also be encoded in conjunction with so-called integrated addresses. Payment IDs and integrated addresses do not affect transaction verification, so they can still be implemented by anyone, but since they are currently deprecated in the most popular wallets we have chosen not to explain them here.}
+
+%\footnote{Note that the index $i$ could just as easily be some password-generated hash $\mathcal{H}_n(x)$. This would allow an address owner to view his subaddress funds from his main address view key, but only be able to spend those funds by inputting a password. There are currently no wallet implementations password protecting subaddresses, nor any known plans to develop a wallet with that feature.}
+Bob generates his $i^\nth$ subaddress $(i = 1, 2, ...)$ from his address as a pair of public keys $(K^{v,i}, K^{s,i})$:\\
+\begin{align*}
+    K^{s,i} &= K^s + \mathcal{H}_n(k^v, i) G\\
+    K^{v,i} &= k^v K^{s,i}
+\end{align*}
+\quad So,
+\begin{alignat*}{2}
+    K^{v,i} &= k^v&&(k^s + \mathcal{H}_n(k^v, i))G\\
+    K^{s,i} &= &&(k^s + \mathcal{H}_n(k^v, i))G
+\end{alignat*}
+    
+
+\subsection{Sending to a subaddress}
+    
+Let's say Alice is going to send Bob money via his subaddress $(K_B^{v,1}, K_B^{s,1})$ with a simple one-input, one-output transaction.
+\begin{enumerate}
+	\item Alice generates a random number $r$ such that $1 < r < l$, and calculates the one-time public key $K^o  = \mathcal{H}_n(r K_B^{v,1})G + K_B^{s,1}$.
+
+	\item Alice sets $K^o$ as the addressee of the payment, \textbf{adds the value} $r K_B^{s,1}$ \textbf{to the transaction data} and submits it to the network.
+	
+	\item Bob receives the data and sees the values $r K_B^{s,1}$ and $K^o$. \textbf{He can calculate} $k_B^v r K_B^{s,1} = r K_B^{v,1}$. He can then calculate $K'^{s,1}_B = K^o - \mathcal{H}_n(r K_B^{v,1})G$. When he sees that $K'^{s,1}_B = K^{s,1}_B$, he knows the transaction is addressed to him.
+	
+	Bob only needs his private view key $k_B^v$ and subaddress public spend key $K^{s,1}_B$ to find transaction outputs sent to his subaddress.
+	
+	\item The one-time keys for the output are:
+	\begin{align*}
+		K^o &= \mathcal{H}_n(r K_B^{v,1})G + K_B^{s,1} = (\mathcal{H}_n(r K_B^{v,1}) + k_B^{s,1})G  \\ 
+		k^o &= \mathcal{H}_n(r K_B^{v,1}) + k_B^{s,1}
+	\end{align*}
+\end{enumerate}
+
+Now, Alice' transaction public key is particular to Bob ($r K_B^{s,1}$ instead of $r G$). If she creates a $p$-output transaction with at least one output intended for a subaddress, Alice needs to make a unique transaction public key for each output $t \in 1,...,p$. In other words, if Alice is sending to Bob's subaddress $(K_B^{v,1}, K_B^{s,1})$ and Carol's address $(K_C^v, K_C^s)$, she will put two transaction public keys \{$r_1 K_B^{s,1},r_2 G$\} in the transaction data.\footnote{In Monero subaddresses are prefixed with an ‘8’, separating them from addresses, which are prefixed with ‘4’. This helps senders choose the correct procedure when constructing transactions.}
+
+
 %[deprecated]-----------------------------------------------------------------
-\iffalse
-\subsection{Integrated addresses}
+%\iffalse
+\section{Integrated addresses}
 \label{sec:integrated-addresses}
 
-In order to differentiate between the outputs they receive, a recipient can request senders include a {\em payment ID} in transaction data. For example, if Alice wants to buy an apple from Bob on a Tuesday, Bob could write a receipt describing the purchase and ask Alice to include the receipt's ID number when she sends him the money. This way Bob can associate the money he receives with the apple he sold.
+In order to differentiate between the outputs they receive, a recipient can request senders include a {\em payment ID} in transaction data.\footnote{Currently, Monero only supports one payment ID per transaction.} For example, if Alice wants to buy an apple from Bob on a Tuesday, Bob could write a receipt describing the purchase and ask Alice to include the receipt's ID number when she sends him the money. This way Bob can associate the money he receives with the apple he sold.
 
-Senders can communicate payment IDs in clear text, but manually including the IDs in transactions is inconvenient, and a privacy hazard for recipients, who might inadvertently expose their activities. In Monero recipients can integrate payment IDs into their addresses, and provide those {\em integrated addresses}, containing ($K^v$, $K^s$, payment ID), to senders. Payment IDs can be integrated into any kind of address, including normal addresses, subaddresses, and multisignature addresses.
+Senders can communicate payment IDs in clear text, but manually including the IDs in transactions is inconvenient, and a privacy hazard for recipients, who might inadvertently expose their activities. In Monero, recipients can integrate payment IDs into their addresses, and provide those {\em integrated addresses}, containing ($K^v$, $K^s$, payment ID), to senders. Payment IDs can technically be integrated into any kind of address, including normal addresses, subaddresses, and multisignature addresses.\footnote{Since an observer can recognize the difference between transactions with and without payment IDs of any kind, using them is thought to make the Monero transaction history less uniform. Subaddresses (`disposable addresses' more generally) can be used for the same purpose, so payment IDs may be superfluous. Based on these ideas, there is some effort in the Monero development community to deprecate all forms of payment ID \cite{deprecating-payment-ids}. However, cryptocurrency exchanges find them useful and are slow to change, so payment IDs might remain a feature indefinitely. Also note integrated addresses have only ever been implemented for normal addresses.}
 
 Senders addressing outputs to integrated addresses can encode payment IDs using the shared secret $r K_t^v$, the output index $t$, and a XOR operation, which recipients can then decode with the appropriate transaction public key and another XOR procedure \cite{integrated-addresses}. Encoding payment IDs in this way allows senders to prove they made particular transactions (i.e. for audits, refunds, etc.).
     
-\subsubsection*{Binary Operator XOR}
+\subsubsection*{Binary operator XOR}
 
 The binary operator XOR evaluates two arguments and returns true if one, but not both, of the arguments is true \cite{wolfram-xor}. Here is its truth table:
 
@@ -99,21 +142,20 @@ In the context of computer science, XOR is equivalent to bit addition modulo 2. 
                                 &= \{0,1\} 
 \end{alignat*}
 
-Examining the previous example, each of these produce the same output: $\text{XOR}(\{1,1\},\{1,0\})$, $\text{XOR}(\{0,0\},\{0,1\})$, $\text{XOR}(\{1,0\},\{1,1\})$, or $\text{XOR}(\{0,1\},\{0,0\})$. There are $2^{\text{b}}$ combinations of XOR inputs for the same output, so if input $A \in_R (1,...,2^{\text{b}})$, an observer who learned $C = \text{XOR}(A,B)$ could not gain any information about $B$.
+Examining the previous example, each of these produce the same output: $\text{XOR}(\{1,1\},\{1,0\})$, $\text{XOR}(\{0,0\},\{0,1\})$, $\text{XOR}(\{1,0\},\{1,1\})$, or $\text{XOR}(\{0,1\},\{0,0\})$. There are $2^{\text{b}}$ combinations of XOR inputs (with $b$ bits each) for the same output, so if input $A \in_R \{1,...,2^{\text{b}}\}$, an observer who learned $C = \text{XOR}(A,B)$ could not gain any information about $B$.
 
-At the same time, anyone who knows two of the elements $A,B,C$, where $C = \text{XOR}(A,B)$, can calculate the third element, such as $A = \text{XOR}(B,C)$. XOR indicates if two elements are different or the same, so providing one is enough to uncover the other. A careful examination of the truth table reveals this to be true.
+At the same time, anyone who knows two of the elements $A,B,C$, where $C = \text{XOR}(A,B)$, can calculate the third element, such as $A = \text{XOR}(B,C)$. XOR indicates if two elements are different or the same, so knowing $C$ and $B$ is enough to reveal $A$. A careful examination of the truth table reveals this to be true.
     
 \subsubsection*{Encoding}
 
-The sender encodes each payment ID\footnote{In Monero payment IDs for integrated addresses are conventionally 64 bits long, while independent, clear text payment IDs are usually 256 bits long.} for inclusion in transaction data\\
+The sender encodes each payment ID for inclusion in transaction data\footnote{In Monero payment IDs for integrated addresses are conventionally 64 bits long, while independent, clear text payment IDs are usually 256 bits long.}\\
 \begin{align*}
          k_{\textrm{stealth}} &= \mathcal{H}_n(r K_t^v, t) \\
       k_{\textrm{payment ID}} &= k_{\textrm{stealth}} \rightarrow \textrm{reduced to bit length of payment ID}\\
   \textrm{encoded payment ID} &= \textrm{XOR}(k_{\textrm{payment ID}}, \textrm{payment ID})
 \end{align*}
     
-The output of a hash function ($\mathcal{H}$) is uniformly distributed across the range of possible outputs. In other words, for some input $A$, $\mathcal{H}(A) \in^D_R \mathbb{S}_H$ where $\mathbb{S}_H$ is the set of possible outputs from $\mathcal{H}$. We use $\in^D_R$ to indicate the function is deterministically random, which means $\mathcal{H}(A)$ produces the same thing every time.\footnote{\label{oracle-note}Hash functions are known as random oracles \cite{Signatures2015BorromeanRS}. ``In cryptography... an oracle is any system which can give some extra information on a system, which otherwise would not be available."\cite{cryptographic-oracle} For example, the security proof for the unforgeability of the signature scheme in \cite{Liu2004} posits an adversary with access to an oracle that can give valid signatures on any given message and using any given public key (adaptive chosen-message, adaptive chosen-public-key model). If the adversary can't forge a signature after analyzing his queries to the oracle, then the scheme is existentially unforgeable. It's called an oracle because it is equivalent to asking a god for help.\par
-Hash functions are random oracles because they are equivalent to asking someone for a random number. Random oracles are useful in cryptography because they are publicly verifiable.}
+The output of a hash function $\mathcal{H}$ is uniformly distributed across the range of possible outputs. In other words, for some input $A$, $\mathcal{H}(A) \in^D_R \mathbb{S}_H$ where $\mathbb{S}_H$ is the set of possible outputs from $\mathcal{H}$. We use $\in^D_R$ to indicate the function is deterministically random. $\mathcal{H}(A)$ produces the same thing every time, but its output is equivalent to a random number.
 
 \subsubsection*{Decoding}
 
@@ -124,70 +166,26 @@ A receiver $t$ can find the $t\nth$ payment ID using his view key and the transa
           \textrm{payment ID} &= \textrm{XOR}(k_{\textrm{payment ID}}, \textrm{encoded payment ID})
 \end{align*}
 
-Similarly, senders can decode payment IDs they had previously encoded by recalculating the shared secret $k_{\textrm{stealth}} = \mathcal{H}_n(r K_t^v G, t)$.
-\fi
+Similarly, senders can decode payment IDs they had previously encoded by recalculating the shared secret $k_{\textrm{stealth}} = \mathcal{H}_n(r K_t^v, t)$.
+%\fi
 %[deprecated]--------------------------------------------------------------------------
-
-\section{Subaddresses}
-\label{sec:subaddresses}
-
-Monero users can generate subaddresses from each address \cite{MRL-0006}. Funds sent to a subaddress can be viewed and spent using its main address’ view and spend keys. By analogy: an online bank account may have multiple balances corresponding to credit cards and deposits, yet they are all accessible and spendable from the same point of view – the account holder.
-
-Subaddress are convenient for receiving funds to the same place when a user doesn’t want to link his activities together by publishing/using the same address. As we will see, an observer would have to solve the DLP in order to determine a given subaddress is derived from any particular address \cite{MRL-0006}.
-
-They are also useful for differentiating between received outputs. For example, if Alice wants to buy an apple from Bob on a Tuesday, Bob could write a receipt describing the purchase and make a subaddress for that receipt, then ask Alice to use that subaddress when she sends him the money. This way Bob can associate the money he receives with the apple he sold.\footnote{Before subaddresses were implemented in April 2018, the Monero developers supported a method called payment IDs, which allowed receivers to differentiate between owned outputs. Payment IDs were text strings included in a transaction's `extra', miscellaneous, data. Recipients could ask senders to include the payment IDs when writing a transaction. Payment IDs could also be encoded in conjunction with so-called integrated addresses. Payment IDs and integrated addresses do not affect transaction verification, so they can still be implemented by anyone, but since they are currently deprecated in the most popular wallets we have chosen not to explain them here.}
-
-%\footnote{Note that the index $i$ could just as easily be some password-generated hash $\mathcal{H}_n(x)$. This would allow an address owner to view his subaddress funds from his main address view key, but only be able to spend those funds by inputting a password. There are currently no wallet implementations password protecting subaddresses, nor any known plans to develop a wallet with that feature.}
-Bob generates his $i^\nth$ subaddress $(i = 1, 2, ...)$ from his address as a pair of public keys $(K^{v,i}, K^{s,i})$:\\
-\begin{align*}
-    K^{s,i} &= K^s + \mathcal{H}_n(k^v, i) G\\
-    K^{v,i} &= k^v K^{s,i}
-\end{align*}
-\quad So,
-\begin{alignat*}{2}
-    K^{v,i} &= k^v&&(k^s + \mathcal{H}_n(k^v, i))G\\
-    K^{s,i} &= &&(k^s + \mathcal{H}_n(k^v, i))G
-\end{alignat*}
-    
-
-\subsection{Sending to a Subaddress}
-    
-Let's say Alice is going to send Bob money via his subaddress $(K_B^{v,1}, K_B^{s,1})$ with a simple one-input, one-output transaction.
-\begin{enumerate}
-	\item Alice generates a random number $r$ such that $1 < r < l$, and calculates the one-time public key $K^o  = \mathcal{H}_n(r K_B^{v,1})G + K_B^{s,1}$ 
-
-	\item Alice sets $K^o$ as the addressee of the payment, \textbf{adds the value} $r K_B^{s,1}$ \textbf{to the transaction data} and submits it to the network.
-	
-	\item Bob receives the data and sees the values $r K_B^{s,1}$ and $K^o$. \textbf{He can calculate} $k_B^v r K_B^{s,1} = r K_B^{v,1}$. He can then calculate $K'^{s,1}_B = K^o - \mathcal{H}_n(r K_B^{s,1})G$. When he sees that $K'^{s,1}_B = K^{s,1}_B$, he knows the transaction is addressed to him.
-	
-	Bob only needs his private view key $k_B^v$ to find transaction outputs sent to his subaddresses.
-	
-	\item The one-time keys for the output are
-	\begin{align*}
-		K^o &= \mathcal{H}_n(r K_B^{v,1})G + k_B^{s,1} G = (\mathcal{H}_n(r K_B^{v,1}) + k_B^{s,1})G  \\ 
-		k^o &= \mathcal{H}_n(r K_B^{v,1}) + k_B^{s,1}
-	\end{align*}
-\end{enumerate}
-
-Now Alice' transaction public key is particular to Bob ($r K_B^{s,1}$ instead of $r G$). If she creates an $m$-output transaction with at least one output intended for a subaddress, Alice needs to make a unique transaction public key for each output $t \in 1,...,m$. In other words, if Alice is sending to Bob's subaddress $(K_B^{v,1}, K_B^{s,1})$ and Carol's address $(K_C^v, K_C^s)$, she will put two transaction public keys \{$r_1 K_B^{s,1},r_2 G$\} in the transaction data.\footnote{In Monero subaddresses are prefixed with an ‘8’, separating them from addresses, which are prefixed with ‘4’. This helps senders choose the correct procedure when constructing transactions.}
-
 
 \section{Transaction types}
 \label{sec:transaction_types}
 
 Monero is a cryptocurrency under steady development. Transaction structures, protocols, and cryptographic schemes are always prone to evolving as new objectives or threats are found.
 
-In this report we have focused our attention on {\em Ring Confidential Transactions}, a.k.a. {\em RingCT}, as they are implemented in the current version of Monero. RingCT is mandatory for all new Monero transactions, so we will not describe any legacy transaction types, even if they are still partially supported.
+In this report we have focused our attention on {\em Ring Confidential Transactions}, a.k.a. {\em RingCT}, as they are implemented in the current version of Monero. RingCT is mandatory for all new Monero transactions, so we will not describe any deprecated transaction types, even if they are still partially supported.
 \\
 
-The transaction types we will describe in this chapter are {\tt RCTTypeFull} and {\tt RCTTypeSimple}. The former category (Section \ref{sec:RCTTypeFull}) closely follows the ideas exposed by S. Noether {\em at al.} in \cite{ledger34}. At the time that paper was written, the authors most likely intended to fully replace the original CryptoNote transaction scheme.
+The transaction types we will describe in this chapter are {\tt RCTTypeFull} and {\tt RCTTypeSimple}. The former category (Section \ref{sec:RCTTypeFull}) closely follows the ideas explained by S. Noether {\em at al.} in \cite{ledger34}. At the time that paper was written, the authors most likely intended to fully replace the original CryptoNote transaction scheme.
 
 However, for multi-input transactions, the signature scheme formulated in that paper was thought to entail a risk on traceability. This will become clear when we supply technical details, but in short: if one spent output became identifiable, the rest of the spent outputs would also become identifiable. This would have an impact on the traceability of currency flows, not only for the transaction originator affected, but also for the rest of the blockchain.
 \\
 
 To mitigate this risk, the Monero Research Lab decided to use a related, yet different signature scheme for multi-input transactions. The transaction type {\tt RCTTypeSimple} (Section \ref{sec:RCTTypeSimple}) is used in those situations. The main difference, as we will see later, is that each input is signed independently.
 
-We present a conceptual summary of transaction data in Section \ref{sec:transaction_summary}.
+We present a conceptual summary of transactions in Section \ref{sec:transaction_summary}.
 
 
 \section{Ring Confidential Transactions of type {\tt RCTTypeFull}}
@@ -203,43 +201,43 @@ We have therefore chosen to describe the scheme as if it were meant for multi-in
 An actual example of a {\tt RCTTypeFull} transaction, with all its components, can be inspected in Appendix \ref{appendix:RCTTypeFull}.
 
 
-\subsection{Amount Commitments}
+\subsection{Amount commitments}
 \label{amount-commitments}
 Recall from Section \ref{sec:pedersen_monero} that we had defined a commitment to an output’s amount $b$ as: 
 \[C(b) = y G + b H\]
 
-In the context of Monero, output recipients should be able to view their outputs’ amounts. This means the blinding factor $y G$ must be communicated to the receiver.
+In the context of Monero, output recipients should be able to reconstruct the amount commitments. This means the blinding factor $y$ and amount $b$ must be communicated to the receiver.
 
-The solution adopted in Monero is a Diffie-Hellman shared secret $r K_B^v$. For any given transaction in the blockchain, each of its outputs $t \in {1, ..., p}$ has 2 associated values called {\em mask} and {\em amount}  satisfying\footnote{As with the stealth address $K^o$, the output index $t$ is appended to the hash in each mask/amount pair. This ensures outputs directed to the same address are secure.
+The solution adopted in Monero is a Diffie-Hellman shared secret $r K_B^v$. For any given transaction in the blockchain, each of its outputs $t \in \{1, ..., p\}$ has two associated values called {\em mask} and {\em amount}  satisfying\footnote{As\marginnote{src/crypto- note\_core/ cryptonote\_ tx\_utils.cpp construct\_ tx\_with\_ tx\_key() calls derivation \_to\_scalar} with the stealth address $K^o$, the output index $t$ is appended to the hash in each mask/amount pair. This ensures outputs directed to the same address do not have similar {\em masks} and {\em amounts}, except with negligible probability.
 Furthermore, the amount term contains an extra hash $\mathcal{H}_n$ to prevent statistical analysis of blockchain data, which might provide insight into currency flows, and to more generally make the mask/amount values unrelated.}%Under construct_tx_with_tx_key, key_amounts is created with the shared secret r K_B^v concatenated with the index using derivation_to_scalar, then ecdhEncode builds the mask and amount when key_amounts is passed to it with the unmasked mask & amount.
 \begin{align*}
-  \mathit{mask}_t     &= y_t + \mathcal{H}_n(r K_B^v, t) \\
+  \mathit{mask}_t\marginnote{src/ringct/ rctOps.cpp ecdhEncode()}     &= y_t + \mathcal{H}_n(r K_B^v, t) \\
   \mathit{amount}_t   &= b_t + \mathcal{H}_n(\mathcal{H}_n(r K_B^v, t))
 \end{align*}
 
-The receiver, Bob, will be able to calculate the blinding factor $y_t$ and the amount $b_t$ using the {\em transaction public key} $r G$ and his {\em view key} $k_B^v$. He can also check that the commitment $C(y_t, b_t)$ provided in the transaction data, henceforth denoted $C_t^b$,  corresponds to the amount at hand.
+The receiver, Bob, will be able to calculate the blinding factor $y_t$ and the amount $b_t$ using the {\em transaction public key} $r G$ and his {\em view key} $k_B^v$. He can also check that the commitment $C(y_t, b_t)$ provided in the transaction data, henceforth denoted $C_t^b$,  corresponds to the amount at hand.\\
 
-More generally, any third party with access to Bob’s {\em view key} would be able to decrypt his output amounts, and make sure they agree with their associated commitments.
+More generally, any third party with access to Bob’s {\em view key} could decrypt his output amounts, and make sure they agree with their associated commitments.
 
 
 
 \subsection{Commitments to zero}
 \label{sec:commitments-to-zero}
 
-Assume a transaction sender has previously received amounts $a_1, ..., a_m$ from various outputs, addressed to one-time addresses $K_{\pi,1}^o, ..., K_{\pi,m}^o$ and with amount commitments $C_{\pi,1}^a, ..., C_{\pi,m}^a$.
+Assume a transaction sender has previously received various outputs with amounts $a_1, ..., a_m$ addressed to one-time addresses $K_{\pi,1}^o, ..., K_{\pi,m}^o$ and with amount commitments $C_{\pi,1}^a, ..., C_{\pi,m}^a$.
 
 This sender knows the private keys $k_{\pi,1}^o, ..., k_{\pi,m}^o$ corresponding to the one-time addresses (Section \ref{sec:one-time-addresses}). The sender also knows the blinding factors $x_j$ used in commitments $C_{\pi,j}^a$ (Section \ref{amount-commitments}).
 
 A transaction consists of inputs \(a_1, ..., a_m\) and outputs \(b_1, ..., b_p\) such that \(\sum\limits_{j=1}^m a_j - \sum\limits_{t=1}^p b_t = 0\). 
  
-The sender re-uses the commitments from the previous outputs, $C_{\pi,1}^a, ..., C_{\pi,m}^a,$ and creates commitments for $b_1, ..., b_p$. Let these commitments be $C_1^b, ..., C_p^b$.
+The sender re-uses the commitments from the previous outputs, $C_{\pi,1}^a, ..., C_{\pi,m}^a,$ and creates commitments for $b_1, ..., b_p$. Let these new commitments be $C_1^b, ..., C_p^b$.
 
-As hinted in Section \ref{sec:pedersen_monero}, the sum of the commitments will not be truly 0, but a curve point $z G$:\\
+As hinted in Section \ref{sec:pedersen_monero}, the sum of the commitments will not be 0, but a curve point $z G$:\\
 \[\sum\limits_j C^a_{\pi, j} -\sum\limits_t C^b_{\pi, t} = z G  \]
 
 The sender will know $z$, allowing him to create a signature on this {\em commitment to zero}. 
 
-Indeed, $z$ follows from the blinding factors if and only if inputs equal outputs (recalling Section \ref{pedersen_section}, we don’t know $\gamma$ in $H = \gamma G$):
+Indeed, $z$ follows from the blinding factors if and only if input amounts equal output amounts (recalling Section \ref{pedersen_section}, we don’t know $\gamma$ in $H = \gamma G$).
 
 
 \begin{align*}
@@ -257,9 +255,10 @@ Indeed, $z$ follows from the blinding factors if and only if inputs equal output
 
 
 
-The sender selects $v$ sets of size $m$, of additional unrelated addresses and their commitments from the blockchain, corresponding to apparently unspent outputs.\footnote{\label{input-selection}In Monero it is standard for the set of `additional unrelated addresses' to be selected from a triangle distribution. To spend an output of type X, we find all other outputs of type X (i.e. RingCT outputs) that might be unspent, then choose randomly from that group based on a triangle. More recent outputs are more likely to be chosen. This is achieved by rolling a random number for each member of the set, normalizing it, taking the square root, multiplying it by the number of `other type X outputs', and using the output at that index in the group.} She mixes the addresses in a {\em ring} with her own $m$ unspent outputs' addresses, adding false commitments to zero, as follows:
-%functions get_random_rct_outs for rct outputs mixed into an rct spend, and get_random_outputs for pre-rct outputs mixed into a pre-rct spend
+The sender selects $v$ sets of size $m$, of additional unrelated addresses and their commitments from the blockchain, corresponding to apparently unspent outputs.\footnote{\label{input-selection}In Monero it is standard for the set of `additional unrelated addresses' to be selected from this distribution: 50\% from 1.8 days ago up to the default transaction spendable age\marginnote{CRYPTO- NOTE\_ DEFAULT\_TX \_SPEND- ABLE\_AGE}[-.5cm], which is usually 10 blocks, 50\% from the remaining blockchain. Each segment has a triangle probability aimed at the 1.8 day mark, where an output 1.8 days old is twice as likely to be chosen as an output 0.9 days old. To spend an output of type X, we find all other outputs of type X (i.e. RingCT outputs) and choose its ring members from that set based on the distribution. The triangle\marginnote{src/wallet/ wallet2.cpp get\_outs()} probabilities are achieved by rolling a random number for each decoy ring member, normalizing it, taking the square root, multiplying it by the number of eligible type X outputs, and using the output at that index in the group (flip the index if the triangle faces backward by computing [\#eligible - index]).} She mixes the addresses in a {\em ring} with her own $m$ unspent outputs' addresses, adding false commitments to zero, as follows:
+%functions get_random_rct_outs for rct outputs mixed into an rct spend, and get_random_outputs for pre-rct outputs mixed into a pre-rct spend. These are only used for light wallets -> instead it is wallet2::get_outs for most situations.
 %--ring member selection changing to gamma distribution in fall 2018
+%CRYPTONOTE_DEFAULT_TX_SPENDABLE_AGE = 10 blocks
 
 \begin{align*}
   \mathcal{R} = \{ &\{K_{1,1}^o,...,K_{1,m}^o, (\sum\limits_j C_{1, j} - \sum\limits_t C^b_{t})\}, \\
@@ -274,7 +273,7 @@ Looking at the structure of the key ring, we see that if  \[\sum\limits_j C^a_{\
 $\{K_{\pi,1}^o,...,K_{\pi,m}^o\}$
 as the ones in use as inputs, and therefore currency flows would be traceable.
 
-With this observation made we can see the utility of $z G$. All commitment terms in $\mathcal{R}$ return some EC point, and the $\pi^{th}$ such term is $z G$. This allows us to create an MLSAG signature (Section \ref{sec:MLSAG}) on $\mathcal{R}$:
+With this observation made we can see the utility of $z G$. All commitment terms in $\mathcal{R}$ return some EC point, and the $\pi^{th}$ such term is $z G$. This allows us to create an MLSAG signature (Section \ref{sec:MLSAG}) on $\mathcal{R}$.
 
 
 \begin{description}%function get_pre_mlsag_hash calculates the message signed
@@ -283,16 +282,15 @@ With this observation made we can see the utility of $z G$. All commitment terms
 	The private keys for 
 	\(\{K_{\pi,1}^o,...,K_{\pi,m}^o, (\sum\limits_j C_{\pi, j}^a - \sum\limits_t C^b_{t})\}\)
 	are \(k_{\pi,1}^o,...,k_{\pi,m}^o, z\), which are known to the sender. 
-	MLSAG in this scenario does not use a key image for the commitment to zero $z G$. This means calculating and verifying the signature excludes the term $r_{i,m+1} \mathcal{H}_p(K_{i,m+1}) + c_i \tilde{K}_z$.
+	MLSAG in this scenario does not use a key image for the commitment to zero $z G$. This means building and verifying the signature excludes the term $r_{i,m+1} \mathcal{H}_p(K_{i,m+1}) + c_i \tilde{K}_z$.\\
 	
-	The message $\mathfrak{m}$ signed in the input MLSAG is essentially a hash of all transaction information {\em except} for the MLSAG signature itself.\footnote{\label{MLSAG_message}The actual message is $\mathfrak{m} = \mathcal{H}(\mathcal{H}(tx\textunderscore prefix),\mathcal{H}(ss),\mathcal{H}(\text{range proof signatures}))$ where:\par
-	$tx\textunderscore prefix = $\{transaction version (i.e. ringCT = 2), inputs \{key offsets, key image\}, outputs \{one-time addresses\}, extra \{transaction public key, misc.\}\}\par
+	The message $\mathfrak{m}$ signed in the input MLSAG is essentially a hash of all transaction information {\em except} for the MLSAG signature itself.\footnote{\label{MLSAG_message}The\marginnote{src/ringct/ rctSigs.cpp get\_pre\_mlsag \_hash()} actual message is $\mathfrak{m} = \mathcal{H}(\mathcal{H}(tx\textunderscore prefix),\mathcal{H}(ss),\mathcal{H}(\text{range proof signatures}))$ where:\par
+	$tx\textunderscore prefix = $\{transaction era version (i.e. ringCT = 2), inputs \{key offsets, key image\}, outputs \{one-time addresses\}, extra \{transaction public key, payment ID or encoded payment ID, misc.\}\}\par
 	$ss = $\{signature type (simple vs full), transaction fee, pseudo output commitments for inputs, ecdhInfo (masks and amounts), output commitments\}.\par
 	See Appendices \ref{appendix:RCTTypeFull} \& \ref{appendix:RCTTypeSimple} regarding this terminology.} This ensures transactions are tamper-proof from the perspective of both transaction authors and verifiers.
 	
 	\item[Range proofs for outputs]
-	To avoid the amount ambiguity of outputs described in Section  \ref{sec:range_proofs}, the sender must also employ the Borromean signature scheme of Section \ref{sec:borromean} to sign amount ranges for each output $t \in {1, ..., p}$. No message $
-\mathfrak{m}$ is signed by the Borromean signatures.
+	To avoid the amount ambiguity of outputs described in Section  \ref{sec:range_proofs}, the sender must also employ the Borromean signature scheme of Section \ref{sec:borromean} to sign amount ranges for each output $t \in \{1, ..., p\}$. No message $\mathfrak{m}$ is signed by the Borromean signatures.\\
 	
 	Range proofs are not needed for input amounts because they are either expressed clearly (as with transaction fees and block rewards), or were proven in range when first created as outputs.
 	
@@ -303,7 +301,7 @@ With this observation made we can see the utility of $z G$. All commitment terms
 
 \subsection{Transaction fees}
 
-Typically transaction outputs are {\em lower} than transaction inputs, in order to provide a fee for miners. Transaction fee amounts are stored in clear text (not encrypted) in the transaction data transmitted to the network. Miners can create an additional output for themselves with the fee. In turn, this fee amount must also be converted into a commitment.
+Typically transaction outputs are {\em lower} in total than transaction inputs, in order to provide a fee for miners.\footnote{In Monero there is a minimum base fee per kB of transaction data. It is semi-mandatory because while you can create new blocks with tiny-fee transactions, most Monero nodes won't relay such transactions to other nodes. We go into more detail on this in Section \ref{subsec:dynamic-minimum-fee}.} Transaction fee amounts are stored in clear text in the transaction data transmitted to the network. Miners can create an additional output for themselves with the fee. This fee amount must also be converted into a commitment so verifiers can confirm transactions sum to zero.
 
 The solution is to calculate the commitment of the fee $f$ without the masking effect of any blinding factor. That is, $C(f) = f H$, where $f$ is communicated in clear text.
 
@@ -314,76 +312,96 @@ Which works because this is a commitment to zero:
 
 \[ (\sum\limits_j C_{\pi, j} - \sum\limits_t C^b_{t}) - f H = z G\]
 
+
 \subsection{Avoiding double-spending}
 
 An MLSAG signature (Section \ref{sec:MLSAG}) contains images \(\tilde{K}_{j}\) of private keys \(k_{\pi, j}\). An important property in any cryptographic signature scheme is that it should be unforgeable with non-negligible probability. Therefore, to all practical effects, we can assume a signature’s key images must have been deterministically produced from legitimate private keys.
 	
-The network need only verify that key images included in MLSAG signatures (corresponding to inputs and calculated as $\tilde{K}^o_{j} = k^o_{\pi,j} \mathcal{H}_p(K^o_{\pi,j})$) have not appeared before in other transactions.\footnote{Verifiers must also check the key image is a member of the generator's subgroup (recall Section \ref{elliptic_curves_section}) by seeing if $l \tilde{K}^o_{j} = 0$, as it is sometimes possible to add an EC point with subgroup order equal to a multiple of $l$ to the key image and still produce a verifiable signature. See \cite{key-image-bug} for more details.} If they have, then we can be sure we are witnessing an attempt to re-spend an output $C^a_{\pi,j}$ addressed to $K_{\pi,j}^o$.
+The network need only verify that key images included in MLSAG signatures (corresponding to inputs and calculated as $\tilde{K}^o_{j} = k^o_{\pi,j} \mathcal{H}_p(K^o_{\pi,j})$) have not appeared before in other transactions.\footnote{Verifiers must also check the key image is a member of the generator's subgroup (recall Section \ref{LSAG_section}).} If they have, then we can be sure we are witnessing an attempt to re-spend an output $C^a_{\pi,j}$ addressed to $K_{\pi,j}^o$.
 
 If someone tries to spend $C^a_{\pi,j}$ twice, they will reveal the index $\pi$ for both transactions where it appears. This has two effects: 1) all outputs at index $\pi$ in the first transaction are revealed as its real inputs, and 2) all outputs at index $\pi$ in the second transaction are revealed as not having been spent before. The second is a problem even considering miners would reject the double-spend transaction.
 
 These effects could weaken the network benefits of ring signatures, and are part of the reason {\tt RCTTypeFull} is only used for single-input transactions. The other main reason is that a cryptanalyst would know that, in general, all real inputs share an index.
 
 
-\subsection{Space requirements}
+\subsection{Space and verification requirements}
 
 \subsubsection*{MLSAG signature (inputs)}
 
 From Section \ref{sec:MLSAG} we recall that an MLSAG signature in this context would be expressed as
 
-\hfill \(\sigma(\mathfrak{m}) = (c_1, r_{1, 1}, ..., r_{1, m+1}, ..., r_{v+1, 1}, ..., r_{v+1, m+1}, \tilde{K}^o_1, ..., \tilde{K}^o_m) \) \hfill \phantom{.}
+\hfill \(\sigma(\mathfrak{m}) = (c_1, r_{1, 1}, ..., r_{1, m+1}, ..., r_{v+1, 1}, ..., r_{v+1, m+1}) \textrm{ with } (\tilde{K}^o_1, ..., \tilde{K}^o_m) \) \hfill \phantom{.}
 
-As a result of the heritage from CryptoNote, the values \(\tilde{K}^o_j\) are not referred to as part of the signature, but rather as {\em images} of the private keys $k^o_{\pi,j}$. These {\em key images} are normally stored separately in the transaction structure as they are used to detect double-spending attacks.
+As a result of the heritage from CryptoNote, the values \(\tilde{K}^o_j\) are not referred to as part of the signature, but rather as {\em images} of the private keys $k^o_{\pi,j}$. These {\em key images} are normally stored separately in the transaction structure, as they are used to detect double-spending attacks.
 
 With this in mind and assuming point compression, an MLSAG signature will require $((v + 1) \cdot (m + 1) + 1) \cdot 32$ bytes of storage where $v$ is the mixin level and $m$ is the number of inputs. In other words, a transaction with 1 input and a total ring size of 32 would consume $(32 \cdot 2 + 1) \cdot 32 = 2080$ bytes.
 
 To this value we would add 32 bytes to store the key image of each input, for $m \cdot 32$ bytes of storage, and additional space to store the ring member offsets in the blockchain (see Appendix \ref{appendix:RCTTypeFull}). These offsets are used by verifiers to find each MLSAG signature's ring members' output keys and commitments in the blockchain, and are stored as variable length integers, hence we can not exactly quantify the space needed.
 
+Including\marginnote{src/ringct/ rctOps.cpp} the computation of \((\sum\limits_j C_{i, j} - \sum\limits_t C^b_{t}) - f H\), and verifying key images are in $G$'s subgroup with $l \tilde{K}$, we verify a {\tt RCTTypeFull} transaction's MLSAG (Section \ref{sec:MLSAG}) with:
+
+\begin{itemize}
+    \setlength\itemsep{\listspace}
+    \item [\textbf{PA}] Point addition for some points $A, B$: $A + B$ \quad \([(m-1)*(v+1) + p]\)%commitment sum 1, sum 2, fee
+    \item [\textbf{PS}] Point subtraction for some points $A, B$ : $A - B$ \quad \([v+1]\)%commitment sub
+    \item [\textbf{VBSM}] Variable-base scalar multiplications for some integer $a$, and point $P$: $a P$ \quad [$m$ + 1]%verify key images are in generator subgroup fee fH
+    \item [\textbf{DVBA}] Double-variable-base addition for some integers $a, b$, and point $B$: $a G + b B$ \quad \([(m+1)*(v+1)]\)%mlsag
+    \item [\textbf{VBA}] Variable-base additions for some integers $a, b$, and points $A, B$: $a A + b B$ \quad \([m*(v+1)]\)%mlsag, no key image for commitments
+\end{itemize}
+
 
 \subsubsection*{Range proofs (outputs)}
 \label{range-proofs-space}
 
-From Section \ref{sec:borromean}, Section \ref{sec:range_proofs}, and Section \ref{full-signature} we know that a Monero Borromean signature for range proofs takes the form of an n-tuple
+From\marginnote{src/ringct/ ringCT.cpp genBorromean()} Section \ref{sec:borromean}, Section \ref{sec:range_proofs}, and Section \ref{full-signature} we know that a Monero Borromean signature for range proofs takes the form of an n-tuple%genBorromean in ringCT.cpp
 
 \[\sigma = (c_1, r_{0, 1}, r_{0, 2}, r_{1, 1}..., r_{63, 2} )  \]
 
-Ring keys are considered part of ring signatures. However, in this case it is only necessary to store the commitments $C_j$, as the ring key counterparts $C_j - 2^j H$ can be easily derived (for verification purposes). 
+Ring keys are considered part of ring signatures. However, in this case it is only necessary to store the commitments $C_i$, as the ring key counterparts $C_i - 2^i H$ can be easily derived (for verification purposes). 
 
 Respecting this convention, a range proof will require \( ( 1 + 64 \cdot 2 + 64  ) 32 = 6176\) bytes per output.
-\\
+
+Including $C_i - 2^i H$ and checking $\sum_i C_i = C$, range proofs for $p$ outputs will require this to verify (Section \ref{range_proofs_blockchain_section}):
+
+\begin{itemize}
+    \setlength\itemsep{\listspace}
+    \item [\textbf{PS}] Point subtraction for some points $A, B$ : $A - B$ \quad \([p*64]\)
+    \item [\textbf{KBSM}] Known-base scalar multiplications for some integer $a$: $a G$ \quad \([p*64]\)
+    \item [\textbf{DVBA}] Double-variable-base addition for some integers $a, b$, and point $B$: $a G + b B$ \quad \([p*2*64 + 63]\)
+\end{itemize}
 
 
-\section{ Ring Confidential Transactions of type {\tt RCTTypeSimple}}
+\section{Ring Confidential Transactions of type {\tt RCTTypeSimple}}
 \label{sec:RCTTypeSimple}
 
-In the current Monero code base, transactions having more than one input are signed using a different scheme, referred to as {\tt RCTTypeSimple}.
+In the current Monero code base, transactions with more than one input are signed using a different scheme, referred to as {\tt RCTTypeSimple}.
 
-The main characteristic of this approach is that instead of signing the entire set of inputs as a whole, the sender signs each of the inputs individually.
+The main characteristic of this approach is that instead of signing the entire set of inputs at once, the sender signs each input separately.
 
-Among other things, this means one can’t use commitments to zero in the same way as for {\tt RCTTypeFull} transactions. A public key $z G$ is a commitment to zero if and only if the sender knows the corresponding private key $z$. If the amounts alone do not sum to zero, then due to the hardness of determining $\gamma$ such that $H = \gamma G$, it would not be possible to know $z$.
+Among other things, this means we can’t use commitments to zero in the same way as for {\tt RCTTypeFull} transactions. It's really unlikely that we could match an input amount to an output amount, and in most cases each input will be less than the sum of outputs. So, we cannot directly commit $inputs - outputs = 0$.
 
 In more detail, assume that Alice wants to sign input $j$. Imagine for a moment we could sign an expression like this\\
 \[  C^a_{j} - \sum\limits_t C^b_{t} \\
-= x_j G -  \sum_t y_t G + (a_j - \sum\limits_t  b_t) H \]
+= (x_j -  \sum_t y_t) G + (a_j - \sum\limits_t  b_t) H \]
 
-Since \(a_j - \sum\limits_t  b_t \ne 0\), Alice would have to solve the DLP for \(H = \gamma G\) in order to obtain the private key of the expression, something we have assumed to be a computationally difficult problem.
+Since \(a_j - \sum\limits_t  b_t \ne 0\), Alice would have to solve the DLP for \(H = \gamma G\) in order to obtain the private key of the expression, something we have assumed to be computationally difficult.
 
 
-\subsection{Amount Commitments}
+\subsection{Amount commitments}
 \label{RCTTypeSimple-commitments}
 
-As explained, if inputs are decoupled from each other the sender is not able to sign an aggregate commitment to zero against the outputs of the current transaction. On the other hand, signing each input individually implies an intermediate approach. The sender could create new commitments to the input amounts and commit to zero with respect to each of the previous outputs being spent. In this way, the sender could prove the transaction takes as input only the outputs of previous transactions.
+As explained, if inputs are decoupled from each other then the sender can't sign an aggregate commitment to zero. On the other hand, signing each input individually implies an intermediate approach. The sender could create new commitments to the input amounts and commit to zero with respect to each of the previous outputs being spent. In this way, the sender could prove the transaction takes as input only the outputs of previous transactions.
 
-In other words, assume that the amounts being spent are \(a_1, ..., a_m\). These amounts were outputs in previous transactions, in which they had commitments\\
+In other words, assume the amounts being spent are \(a_1, ..., a_m\). These amounts were outputs in previous transactions, in which they had commitments\\
 \[C^a_{j} = x_j G + a_j H\]
 
 
-The sender can create new commitments to the same amounts but using different blinding factors, that is
+The sender can create new commitments to the same amounts but using different blinding factors; that is,
 \[C'^a_{j} = x'_j G + a_j H\]
 
 Clearly, she would know the private key of the difference between the two commitments: \\
 \[ C^a_{j} - C'^a_{j} = (x_j - x'_j) G \] \\
-hence, she would be able to use this value as a {\em commitment to zero} for each input. Let us say $(x_j - x'_j) = z_j$, and call each $C'^a_j$ a {\em pseudo output commitment}.
+Hence, she would be able to use this value as a {\em commitment to zero} for each input. Let us say $(x_j - x'_j) = z_j$, and call each $C'^a_j$ a {\em pseudo output commitment}.
 \\
 
 Similarly to {\tt RCTTypeFull} transactions, the sender can include each output’s encoded blinding factor (mask) for $y_t$ and amount for $b_t$ in the transaction (see Section \ref{amount-commitments}), which will allow each receiver $t$ to decode $y_t$ and $b_t$ using the shared secret $r K_t^v$.
@@ -393,27 +411,27 @@ Before committing a transaction to the blockchain, the network will want to veri
 \\
 
 For {\tt RCTTypeSimple} transactions, blinding factors for input and output commitments are selected such that
-\[\sum_j x_j  - \sum_t y_t = 0  \]
+\[\sum_j x'_j  - \sum_t y_t = 0  \]
 
 This will have the effect that\\
 \[ (\sum_j C'^a_{j} - \sum_t C^b_{t}) - f H = 0\]
 
 
-Fortunately, choosing such blinding factors is simple. In the current version of Monero, all blinding factors are random except $x_m$, which is simply set to
+Fortunately, choosing such blinding factors is simple. In the current version of Monero, all blinding factors are random except $x'_m$, which is simply set to
 
-\[x_m = \sum_t y_t - \sum_{j=1}^{m-1} x_j  \]
+\[x'_m = \sum_t y_t - \sum_{j=1}^{m-1} x'_j  \]
 
 
 
 
 \subsection{Signature}
 
-As we mentioned earlier, in transactions of type {\tt RCTTypeSimple} each input is signed individually. We use the same MLSAG signature scheme as for {\tt RCTTypeFull} transactions, except with different signing keys.
+As we mentioned, in transactions of type {\tt RCTTypeSimple} each input is signed individually. We use the same MLSAG signature scheme as for {\tt RCTTypeFull} transactions, except with different signing keys.
 \\
 
 Assume that Alice is signing input $j$. This input spends a previous output with key $K^o_{\pi,j}$ that had commitment $C^a_{\pi,j}$. Let $C'^a_{\pi,j}$ be a new commitment for the same amount but with a different blinding factor.
 
-Similarly to the previous scheme, the sender selects $v$ unrelated outputs and their respective commitments from the blockchain, to mix with the real $j^{th}$ output
+Similar to the previous scheme, the sender selects $v$ unrelated outputs and their respective commitments from the blockchain to mix with the real, $j^{th}$, input
 \begin{align*}
 & K^o_{1, j}, ..., K^o_{\pi-1, j}, K^o_{\pi+1, j}, ..., K^o_{v+1, j} \\
 & C_{1, j}, ..., C_{\pi-1, j}, C_{\pi+1, j}, ..., C_{v+1, j}
@@ -430,17 +448,17 @@ She can then sign using the following ring:
 \end{align*}
 
 
-Alice will know the private key $k^o_{\pi,j}$ for $K^o_{\pi,j}$ as well as the one for the commitment to zero $(C^a_{\pi,j}$ - $C'^a_{\pi,j})$, which is $z_j$. Therefore she can sign the $j^{th}$ input with an MLSAG signature on $\mathcal{R}_j$. Recalling Section \ref{full-signature}, there is no key image for the commitments to zero $z_j G$, and consequently no corresponding key image term in each input’s signature’s construction.
+Alice will know the private keys $k^o_{\pi,j}$ for $K^o_{\pi,j}$, and $z_j$ for the commitment to zero $(C^a_{\pi,j}$ - $C'^a_{\pi,j})$. She can sign the $j^{th}$ input with an MLSAG signature on $\mathcal{R}_j$. Recalling Section \ref{full-signature}, there is no key image for the commitments to zero $z_j G$, and consequently no corresponding key image component in each input’s signature’s construction.
 \\
 
 Each input in {\tt RCTTypeSimple} transactions is signed individually, applying the scheme described in Section \ref{full-signature}, but using rings like \(\mathcal{R}_j\) as defined above.
 
-The advantage of signing inputs individually is that the set of real inputs and commitments to zero need not be placed at the same index $\pi$, as they are in the MLSAG algorithm. This means even if one input's origin became identifiable, the other inputs' origins would not.
+The advantage of signing inputs individually is that the set of real inputs and commitments to zero need not be placed at the same index $\pi$, as they are in the aggregated case. This means even if one input's origin became identifiable, the other inputs' origins would not.
 
 The message $\mathfrak{m}$ signed by each input is essentially the same as for $\tt RCTTypeFull$ transactions (see Footnote \ref{MLSAG_message}), except it includes pseudo output commitments for the inputs. Only one message is produced, and each input MLSAG signs it.
 
 
-\subsection{Space Requirements}
+\subsection{Space and verification requirements}
 
 \subsubsection*{MLSAG signature (inputs)}
 
@@ -450,30 +468,48 @@ A transaction with 20 inputs using rings with 32 total members will need \(((32 
 
 For the sake of comparison, if we were to apply the {\tt RCTTypeFull} scheme to the same transaction, the MLSAG signature and key images would require \(( 32 \cdot 21 + 1) \cdot 32 + 20 \cdot 32 = 22176\) bytes.
 
+Including\marginnote{src/ringct/ rctOps.cpp} the computation of \( (C_{i, j} - C'^a_{\pi, j}) \) and \( (\sum_j C'^a_{j} - \sum_t C^b_{t}) - f H \), and verifying key images are in $G$'s subgroup with $l \tilde{K}$, we verify all of a {\tt RCTTypeSimple} transaction's MLSAGs with:
+
+\begin{itemize}
+    \setlength\itemsep{\listspace}
+    \item [\textbf{PA}] Point addition for some points $A, B$: $A + B$ \quad \([(m-1) + p]\)%commitment sum 1, sum 2, fee
+    \item [\textbf{PS}] Point subtraction for some points $A, B$ : $A - B$ \quad \([m*(v+1)]\)
+    \item [\textbf{VBSM}] Variable-base scalar multiplications for some integer $a$, and point $P$: $a P$ \quad [$m$ + 1]
+    \item [\textbf{DVBA}] Double-variable-base addition for some integers $a, b$, and point $B$: $a G + b B$ \quad \([2*m*(v+1)]\)
+    \item [\textbf{VBA}] Variable-base additions for some integers $a, b$, and points $A, B$: $a A + b B$ \quad \([m*(v+1)]\)
+\end{itemize}
 
 \subsubsection*{Range proofs (outputs)}
 
 The size of range proofs remains the same for {\tt RCTTypeSimple} transactions. As we calculated for {\tt RCTTypeFull} transactions, each output will require 6176 bytes of storage.
 
+As before, each range proof will require this to verify:
+
+\begin{itemize}
+    \setlength\itemsep{\listspace}
+    \item [\textbf{PS}] Point subtraction for some points $A, B$ : $A - B$ \quad \([p*64]\)
+    \item [\textbf{KBSM}] Known-base scalar multiplications for some integer $a$: $a G$ \quad \([p*64]\)
+    \item [\textbf{DVBA}] Double-variable-base addition for some integers $a, b$, and point $B$: $a G + b B$ \quad \([p*2*64 + 63]\)
+\end{itemize}
 
 
 \newpage
-\section{Concept summary}
+\section{Concept summary: Monero transactions}
 \label{sec:transaction_summary}
 
-To summarize this chapter we present the main content of a transaction, reorganized for conceptual clarity. Real examples can be found in Appendices \ref{appendix:RCTTypeFull} and \ref{appendix:RCTTypeSimple}.
+To summarize this chapter we present the main content of a transaction, organized for conceptual clarity. Real examples can be found in Appendices \ref{appendix:RCTTypeFull} and \ref{appendix:RCTTypeSimple}.
 
 \begin{itemize}
-    \item \underline{Type}: `0' is {\tt Block Reward}, `1' is {\tt RCTTypeFull}, and `2' is {\tt RCTTypeSimple} %see chapter 6, blockchain, about type 0 transactions
-    \item \underline{Inputs}: for each input $j \in 1,...,m$ spent by the transaction author
+    \item \underline{Type}: `0' is {\tt Miner Transaction}, `1' is {\tt RCTTypeFull}, and `2' is {\tt RCTTypeSimple} %see chapter 7, blockchain, about type 0 transactions
+    \item \underline{Inputs}: for each input $j \in \{1,...,m\}$ spent by the transaction author
     \begin{itemize}
-        \item \textbf{Ring member offsets}: a list of `offsets' indicating where a verifier can find input $j$'s ring members $i \in 1,...,v+1$ in the blockchain (includes the real input)
-        \item \textbf{MLSAG Signature}: $\sigma$ terms $c_1$, and $r_{i,j}$ \& $r^{z}_{i,j}$ for $i \in 1,...,v+1$ and input $j$
+        \item \textbf{Ring member offsets}: a list of `offsets' indicating where a verifier can find input $j$'s ring members $i \in \{1,...,v+1\}$ in the blockchain (includes the real input)
+        \item \textbf{MLSAG Signature}: $\sigma$ terms $c_1$, and $r_{i,j}$ \& $r^{z}_{i,j}$ for $i \in \{1,...,v+1\}$ and input $j$
         \item \textbf{Key image}: the key image $\tilde{K}^{o,a}_j$ for input $j$
         \item \textbf{Pseudo output commitment} {[{\tt RCTTypeSimple} only]}: $C'^{a}_j$ for input $j$
     \end{itemize}
     
-    \item \underline{Outputs}: for each output $t \in 1,...,p$ to address or subaddress $(K^v_t,K^s_t)$
+    \item \underline{Outputs}: for each output $t \in \{1,...,p\}$ to address or subaddress $(K^v_t,K^s_t)$
     \begin{itemize}
         \item \textbf{One-time (stealth) address}: $K^{o,b}_t$
         \item \textbf{Output commitment}: $C^{b}_t$ for output $t$
@@ -482,12 +518,55 @@ To summarize this chapter we present the main content of a transaction, reorgani
             \item \textit{Mask}: $y_t + \mathcal{H}_n(r K^v_t,t)$
             \item \textit{Amount}: $b_t + \mathcal{H}_n(\mathcal{H}_n(r K^v_t,t))$
         \end{itemize}
-        \item \textbf{Range proof} for output $t$ using a Borromean ring signature
+        \item \textbf{Range proof} for output amount $b_t$ using a Borromean ring signature
         \begin{itemize}
-            \item \textit{Signature}: $\sigma$ terms $c_1$, and $r_{i,j}$ for $i \in 0,...,63$ and $j \in 1,2$
-            \item \textit{Bit commitments}: $C_i$ for $i \in 0,...,63$
+            \item \textit{Signatures}: $\sigma$ terms $c_1$, and $r_{i,j}$ for $i \in \{0,...,63\}$ and $j \in \{1,2\}$
+            \item \textit{Bit commitments}: $C_i$ for $i \in \{0,...,63\}$
         \end{itemize}
     \end{itemize}
     \item \underline{Transaction fee}: communicated in clear text multiplied by $10^{12}$, so a fee of 1.0 would be recorded as 1000000000000
-    \item \underline{Extra}: includes the transaction public key $r G$, or, if at least one output is directed to a subaddress, $r_t K^{s,i}_t$ for each subaddress'd output $t$ and $r_t G$ for each normal address'd output $t$%[deprecated], payment IDs, and encoded payment IDs
+    \item \underline{Extra}: includes the transaction public key $r G$, or, if at least one output is directed to a subaddress, $r_t K^{s,i}_t$ for each subaddress'd output $t$ and $r_t G$ for each normal address'd output $t$, and a payment ID or encoded payment ID (max one per transaction)
+\end{itemize}
+
+\newpage
+\subsection{Storage and verification requirements}
+
+For\marginnote{src/ringct/ rctOps.cpp} {\tt RCTTypeFull} we need $((v + 1) \cdot (m + 1) + m + 1) \cdot 32$ bytes of storage, and verify with:
+\begin{itemize}
+    \setlength\itemsep{\listspace}
+    \item [\textbf{PA}] Point addition for some points $A, B$: $A + B$ \quad \([(m-1)*(v+1) + p]\)%commitment sum 1, sum 2, fee
+    \item [\textbf{PS}] Point subtraction for some points $A, B$ : $A - B$ \quad \([v+1]\)%commitment sub
+    \item [\textbf{VBSM}] Variable-base scalar multiplications for some integer $a$, and point $P$: $a P$ \quad [$m$ + 1]%fee fH
+    \item [\textbf{DVBA}] Double-variable-base addition for some integers $a, b$, and point $B$: $a G + b B$ \quad \([(m+1)*(v+1)]\)%mlsag
+    \item [\textbf{VBA}] Variable-base additions for some integers $a, b$, and points $A, B$: $a A + b B$ \quad \([m*(v+1)]\)%mlsag, no key image for commitments
+\end{itemize}
+
+For {\tt RCTTypeSimple} we need $(2(v+1)+3) \cdot m \cdot 32$ bytes of storage, and verify with:
+\begin{itemize}
+    \setlength\itemsep{\listspace}
+    \item [\textbf{PA}] Point addition for some points $A, B$: $A + B$ \quad \([(m-1) + p]\)%commitment sum 1, sum 2, fee
+    \item [\textbf{PS}] Point subtraction for some points $A, B$ : $A - B$ \quad \([m*(v+1)]\)
+    \item [\textbf{VBSM}] Variable-base scalar multiplications for some integer $a$, and point $P$: $a P$ \quad [$m$ + 1]
+    \item [\textbf{DVBA}] Double-variable-base addition for some integers $a, b$, and point $B$: $a G + b B$ \quad \([2*m*(v+1)]\)
+    \item [\textbf{VBA}] Variable-base additions for some integers $a, b$, and points $A, B$: $a A + b B$ \quad \([m*(v+1)]\)
+\end{itemize}
+
+Output range proofs need $p \cdot 6176$ bytes of storage, and verify with:
+\begin{itemize}
+    \setlength\itemsep{\listspace}
+    \item [\textbf{PS}] Point subtraction for some points $A, B$ : $A - B$ \quad \([p*64]\)
+    \item [\textbf{KBSM}] Known-base scalar multiplications for some integer $a$: $a G$ \quad \([p*64]\)
+    \item [\textbf{DVBA}] Double-variable-base addition for some integers $a, b$, and point $B$: $a G + b B$ \quad \([p*2*64 + 63]\)
+\end{itemize}
+
+Miscellaneous storage requirements:
+\begin{itemize}
+    \setlength\itemsep{\listspace}
+    \item One-time output addresses: $p*32$ bytes
+    \item Output commitments: $p*32$ bytes
+    \item Diffie-Hellman terms for outputs: $2*p*32$ bytes
+    \item Transaction public key: 32 bytes normally, $p*32$ bytes if sending to at least one subaddress.
+    \item Payment ID: 8 bytes for an integrated address, or 32 bytes for a plain payment ID. Max one per tx.
+    \item Transaction fee: stored as variable length integer, so $\leq 64$ bits
+    \item Input offsets: stored as variable length integer, so $\leq 64$ bits per input
 \end{itemize}

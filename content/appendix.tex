@@ -1,5 +1,3 @@
-
-
 \begin{appendices}
 
 \renewcommand{\theFancyVerbLine}{%
@@ -19,16 +17,16 @@ The dump was obtained executing command {\tt print\_tx <TransactionID>} in the {
 For editorial reasons we have shortened long hexadecimal chains, presenting only the beginning and end as in {\tt 0200010c7f[...]409}.
 \\
 
-Component {\tt rctsig\_prunable}, as indicated by its name, is in theory {\sl prunable} from the blockchain. That is, once a block has been consensuated and the current chain length rules out all possibilities of double-spending attacks, this whole field could be pruned. This is something that has not yet been done in the Monero blockchain, but it is nevertheless a possibility. This would yield considerable space savings. 
+Component {\tt rctsig\_prunable}, as indicated by its name, is in theory {\sl prunable} from the blockchain. That is, once a block has been consensuated and the current chain length rules out all possibilities of double-spending attacks, this whole field could be pruned. This is something that has not yet been done in the Monero blockchain, but is nevertheless a possibility. This would yield considerable space savings. 
 
 Key images and ring keys are stored separately, in the non-prunable area of transactions. These components are essential for detecting double-spend attacks and can’t be pruned away.
 \\
 
-Our sample transaction has 1 input and 2 outputs.
+Our sample transaction has 1 input and 2 outputs, and was added to the blockchain at timestamp 2017-12-18 20:28:11 UTC (as reported by its block's miner).
 
 
 \begin{Verbatim}[commandchars=\\\{\}, numbers=left]
-print_tx  b43a7ac21e1b60ad748ec905d6e03cf3165e5d8c9e1c61c263d328118c42eaa6 
+monerod print_tx  b43a7ac21e1b60ad748ec905d6e03cf3165e5d8c9e1c61c263d328118c42eaa6 
 Found in blockchain at height 1467685
 0200010c7f[...]409
 \{
@@ -99,38 +97,42 @@ Found in blockchain at height 1467685
 
 \end{Verbatim}
 
+
 \section*{Transaction components}
 	
 \begin{itemize}
     \item (line 2) - {\tt print\_tx} reports where it found the transaction.
     \item (line 3) - Raw transaction data with no readability formatting.
-	\item {\tt version} (line 5) - Transaction format version, `2' corresponds to RingCT.
+	\item {\tt version} (line 5) - Transaction format/era version; `2' corresponds to RingCT.
+	\item {\tt unlock\_time} (line 6) - Prevents a transactions outputs from being spent until the time has past. It is either a block height or a UNIX timestamp if the number is larger than the beginning of UNIX time.	
 	\item {\tt vin} (line 7-14) - List of inputs (there’s only one)
 	\item {\tt amount} (line 9) - Deprecated (legacy) amount field for type 1 transactions
 	\item {\tt key\_offset} (line 10) - Relative offsets with respect to most recent block for ring components: spent output, and mixin outputs. As an illustration, 799048 is to be interpreted as the 799048\nth transaction counting backwards, starting from within the most recent block. This allows verifiers to find ring member keys and commitments in the blockchain, and makes it obvious those members are legitimate.
-	\item {\tt k\_image} (line 12) - Key image \(\tilde{K_j}\) from Section \ref{sec:MLSAG}, where $m = j = 1$ for 1 input.
+	\item {\tt k\_image} (line 12) - Key image \(\tilde{K_j}\) from Section \ref{sec:MLSAG}, where $m = j = 1$ for the 1 input here.
 	\item {\tt vout} (lines 16-27) - List of outputs (there are two)
 	\item {\tt amount} (line 17) - Deprecated amount field for type 1 transactions
 	\item {\tt key} (line 19) - One-time destination key for output $t$ as described in Section \ref{sec:one-time-addresses} Also known as the stealth address.
-	\item {\tt extra} (lines 28-32) - Miscellaneous data, including the {\em transaction public key}, i.e. the share secret $r G$ of Section  \ref{sec:one-time-addresses} %[deprecated], and payment IDs and encoded payment IDs from Section \ref{sec:integrated-addresses}
+	\item {\tt extra} (lines 28-32) - Miscellaneous data, including the {\em transaction public key}, i.e. the share secret $r G$ of Section  \ref{sec:one-time-addresses}, and payment ID or encoded payment ID from Section \ref{sec:integrated-addresses}
 	\item {\tt rct\_signatures} (lines 33-45) - First part of signature data
 	\item {\tt type} (line 34) - Signature type; {\tt RCTTypeFull} is type 1.
 	\item {\tt txnFee} (line 35) - Transaction fee in clear, in this case 0.026 XMR
-	\item {\tt ecdhInfo} (lines 36-42) - ‘elliptic curve diffie-hellman info’: Encrypted mask and amount of each of the outputs $t \in {1, ..., p}$, here $p = 2$
+	\item {\tt ecdhInfo} (lines 36-42) - ‘elliptic curve diffie-hellman info’: Obscured mask and amount for each of the outputs $t \in {1, ..., p}$; here $p = 2$
 	\item {\tt mask} (line 37) - Field {\sl mask} at $t = 1$ as described in Section \ref{amount-commitments}
     \item {\tt amount} (line 38) - Field {\sl amount} at $t = 1$ as described in Section \ref{amount-commitments}
     \item {\tt outPk} (lines 43-44) - Commitments for each output, Section \ref{sec:commitments-to-zero}
     
     \item {\tt rctsig\_prunable} (lines 46-67) - Second part of signature data
     \item {\tt rangeSigs} (lines 47-53) - Range proofs for output $t \in {1, ..., p}$ commitments 
-    \item {\tt asig} (line 48) - Borromean signature terms for the range proof of output $t = 1$ (includes $c_1$ and all $r$), see Section \ref{range-proofs-space} 
-    \item {\tt Ci} (line 49) -  Borromean commitments (ring keys) for the range proof on output $t = 1$, as described in Section \ref{full-signature}. As explained in Section \ref{range-proofs-space} only the commitments $C_i$ need to be stored, as the values $C_i -2^i H$ can be easily derived by verifiers. 
+    \item {\tt asig} (line 48) - Borromean signature terms for the range proof of output $t = 1$ (includes all $c$ and $r$), see Section \ref{range-proofs-space} 
+    \item {\tt Ci} (line 49) -  Commitments (ring keys) for the range proof on output $t = 1$, as described in Section \ref{full-signature}. As explained in Section \ref{range-proofs-space} only the commitments $C_i$ need to be stored, as the values $C_i -2^i H$ can be easily derived by verifiers. 
     \item {\tt MGs} (lines 54-66) - Remaining elements of the MLSAG signature
     \item {\tt ss} (lines 55-64) - Components \(r_{i,j}\) from the MLSAG signature
-      \[\sigma(\mathfrak{m}) = (c_1, r_{1, 1}, ..., r_{1, m+1}, ..., r_{v+1, 1}, ..., r_{v+1, m+1}, \tilde{K}_1, ...,  \tilde{K}_m) \]
+      \[\sigma(\mathfrak{m}) = (c_1, r_{1, 1}, ..., r_{1, m+1}, ..., r_{v+1, 1}, ..., r_{v+1, m+1}) \]
     \item {\tt cc} (line 65) - Component \(c_1\) from aforementioned MLSAG signature
 	
 \end{itemize}
+
+
 
 
 
@@ -138,12 +140,11 @@ Found in blockchain at height 1467685
 \label{appendix:RCTTypeSimple}
 
 
-In this section we show the structure of a sample transaction of type {\tt RCTTypeSimple}. The transaction has 4 inputs and 2 outputs.
-
+In this section we show the structure of a sample transaction of type {\tt RCTTypeSimple}. The transaction has 4 inputs and 2 outputs, and was added to the blockchain at timestamp \( \textrm{2017-12-21 11:36:20 UTC} \) (as reported by its block's miner).
 
 
 \begin{Verbatim}[commandchars=\\\{\}, numbers=left]
-print_tx 3ebf45fc5f8fd683037807384122817d5debfa762c7a7845cb7ccfe9ee20940b 
+monerod print_tx 3ebf45fc5f8fd683037807384122817d5debfa762c7a7845cb7ccfe9ee20940b 
 Found in blockchain at height 1469563
 020004[...]923b3d70d
 \{
@@ -275,6 +276,7 @@ Found in blockchain at height 1469563
 
 \end{Verbatim}
 
+
 \section*{Transaction components}
 
 What follows is a short explanation of the most important elements in this type of transaction. We only mention components that are specific to, or differ from, the previous {\tt RCTTypeFull} transaction type.
@@ -282,7 +284,162 @@ What follows is a short explanation of the most important elements in this type 
 
 \begin{itemize}
 	\item {\tt type} (line 53) - Signature type, in this case the value 2, corresponding to {\tt RCTTypeSimple} transactions
-    \item {\tt pseudoOuts} (lines 55-58) - Pseudo-output commitments $C'^a_j$, as described in Section  \ref{RCTTypeSimple-commitments}. Please recall that the sum of these commitments will equal the sum of the 2 output commitments of this transaction (plus the transaction fee $f H$).
+    \item {\tt pseudoOuts} (lines 55-58) - Pseudo-output commitments $C'^a_j$, as described in Section  \ref{RCTTypeSimple-commitments}. Please recall that the sum of these commitments will equal the sum of the 2 output commitments of this transaction (plus the transaction fee commitment $f H$).
 \end{itemize}
+
+
+
+
+\chapter{Block content}
+\label{appendix:block-content}
+
+In this section we show the structure of a sample block, namely the 1582196\nth block after the genesis block. The block has 5 transactions, and was added to the blockchain at timestamp 2018-05-27 21:56:01 UTC (as reported by the block's miner).
+
+
+\begin{Verbatim}[commandchars=\\\{\}, numbers=left]
+monerod print_block 1582196
+timestamp: 1527458161
+previous hash: 30bb9b475a08f2ea6fe07a1fd591ea209a7f633a400b2673b8835a975348b0eb
+nonce: 2147489363
+is orphan: 0
+height: 1582196
+depth: 2
+hash: 50c8e5e51453c2ab85ef99d817e166540b40ef5fd2ed15ebc863091ca2a04594
+difficulty: 51333809600
+reward: 4634817937431
+\{
+  "major_version": 7,
+  "minor_version": 7,
+  "timestamp": 1527458161,
+  "prev_id": "30bb9b475a08f2ea6fe07a1fd591ea209a7f633a400b2673b8835a975348b0eb",
+  "nonce": 2147489363,
+  "miner_tx": \{
+    "version": 2,
+    "unlock_time": 1582256,
+    "vin": [ \{
+        "gen": \{
+          "height": 1582196
+        \}
+      \}
+    ],
+    "vout": [ \{
+        "amount": 4634817937431,
+        "target": \{
+          "key": "39abd5f1c13dc6644d1c43db68691996bb3cd4a8619a37a227667cf2bf055401"
+        \}
+      \}
+    ],
+    "extra": [ 1, 89, 148, 148, 232, 110, 49, 77, 175, 158, 102, 45, 72, 201, 193,
+    18, 142, 202, 224, 47, 73, 31, 207, 236, 251, 94, 179, 190, 71, 72, 251, 110, 
+    134, 2, 8, 1, 242, 62, 180, 82, 253, 252, 0
+    ],
+    "rct_signatures": \{
+      "type": 0
+    \}
+  \},
+  "tx_hashes": [ "e9620db41b6b4e9ee675f7bfdeb9b9774b92aca0c53219247b8f8c7aecf773ae",
+                 "6d31593cd5680b849390f09d7ae70527653abb67d8e7fdca9e0154e5712591bf",
+                 "329e9c0caf6c32b0b7bf60d1c03655156bf33c0b09b6a39889c2ff9a24e94a54",
+                 "447c77a67adeb5dbf402183bc79201d6d6c2f65841ce95cf03621da5a6bffefc",
+                 "90a698b0db89bbb0704a4ffa4179dc149f8f8d01269a85f46ccd7f0007167ee4"
+  ]
+\}
+\end{Verbatim}
+
+
+\section*{Block components}
+
+\begin{itemize}
+	\item (lines 2-10) - Block information collected by software, not actually part of the block properly speaking.
+    \item {\tt is orphan} (line 5) - Signifies if this block was orphaned. Nodes usually store all branches during a fork situation, and discard unnecessary branches when a cumulative difficulty winner emerges, thereby orphaning the blocks.
+    \item {\tt depth} (line 7) - In a blockchain copy, the depth of any given block is how far back in the chain it is relative to the most recent block.
+    \item {\tt hash} (line 8) - This block's block ID.
+    \item {\tt difficulty} (line 9) - Difficulty isn't stored in a block, since users can compute {\em all} block difficulties from block timestamps and the rules in Section \ref{sec:difficulty}.
+    \item {\tt major\_version} (line 12) - Corresponds to protocol version used to verify this block.
+    \item {\tt minor\_version} (line 13) - Used by miners to signify which protocol version they like. This seems largely meaningless to us.
+    \item {\tt timestamp} (line 14) - An integer representation of this block's UTC timestamp, as reported by the block's miner.
+    \item {\tt prev\_id} (line 15) - The previous block's block ID. Herein lies the essence of Monero's blockchain.
+    \item {\tt nonce} (line 16) - The nonce used by this block's miner to pass its difficulty target. Anyone can recompute the proof of work and verify the nonce is valid.
+    \item {\tt miner\_tx} (lines 17-38) - This block's miner transaction.
+    \item {\tt version} (line 18) - Transaction format/era version; `2' corresponds to RingCT.
+    \item {\tt unlock\_time} (line 19) - The miner transaction's output can't be spent until 60 more blocks have been mined.
+    \item {\tt vin} (lines 20-25) - Inputs to the miner tx. There are none, since the miner tx is used to generate block rewards and collect transaction fees.
+    \item {\tt gen} (line 21) - Short for `generate'.
+    \item {\tt height} (line 22) - The block height this miner tx's block reward was generated for. Each block height can only generate a block reward once.
+    \item {\tt vout} (lines 26-32) - Outputs of the miner tx.
+    \item {\tt amount} (line 27) - Amount dispersed by the miner tx, containing block reward and fees from this block's transactions. Recorded in atomic units.
+    \item {\tt key} (line 29) - One-time (stealth) address assigning ownership of the miner tx's amount.
+    \item {\tt extra} (lines 33-36) - Extra information for the miner tx, including transaction public key.
+    \item {\tt tx\_hashes} (line 37) - All transaction IDs included in this block (but not the miner tx ID).
+\end{itemize}
+
+
+
+
+\chapter{Genesis block}
+\label{appendix:genesis-block}
+
+In this section we show the structure of the Monero genesis block. The block has 0 transactions (it just sends the first block reward to thankful\_for\_today \cite{bitmonero-launched}). Monero's founder did not add a timestamp, perhaps as a relic of Bytecoin, the coin Monero's code was forked from, whose creators apparently tried to hide a large pre-mine \cite{monero-history}.
+
+Block 1 was added to the blockchain at timestamp 2014-04-18 10:49:53 UTC (as reported by the block's miner), so we can assume the genesis block was created the same day. This corresponds with the launch date announced by thankful\_for\_today \cite{bitmonero-launched}.
+
+\begin{Verbatim}[commandchars=\\\{\}, numbers=left]
+monerod print_block 0
+timestamp: 0
+previous hash: 0000000000000000000000000000000000000000000000000000000000000000
+nonce: 10000
+is orphan: 0
+height: 0
+depth: 1580975
+hash: 418015bb9ae982a1975da7d79277c2705727a56894ba0fb246adaabb1f4632e3
+difficulty: 1
+reward: 17592186044415
+\{
+  "major_version": 1,
+  "minor_version": 0,
+  "timestamp": 0,
+  "prev_id": "0000000000000000000000000000000000000000000000000000000000000000",
+  "nonce": 10000,
+  "miner_tx": \{
+    "version": 1,
+    "unlock_time": 60,
+    "vin": [ \{
+        "gen": \{
+          "height": 0
+        \}
+      \}
+    ],
+    "vout": [ \{
+        "amount": 17592186044415,
+        "target": \{
+          "key": "9b2e4c0281c0b02e7c53291a94d1d0cbff8883f8024f5142ee494ffbbd088071"
+        \}
+      \}
+    ],
+    "extra": [ 1, 119, 103, 170, 252, 222, 155, 224, 13, 207, 208, 152, 113, 94, 188, 
+    247, 244, 16, 218, 235, 197, 130, 253, 166, 157, 36, 162, 142, 157, 11, 200, 144, 
+    209
+    ],
+    "signatures": [ ]
+  \},
+  "tx_hashes": [ ]
+\}
+\end{Verbatim}
+
+
+\section*{Genesis block components}
+
+Since we used the same software to print the genesis block and the block from Appendix \ref{appendix:block-content}, the structure appears basically the same. We point out some unique differences.
+
+\begin{itemize}
+	\item {\tt difficulty} (line 9) - While the genesis block's difficulty is reported as 1, it isn't used for anything.
+	\item {\tt timestamp} (line 14) - The genesis block doesn't have a meaningful timestamp.
+	\item {\tt prev\_id} (line 15) - We use 64 zeros for the previous ID, by convention.
+	\item {\tt nonce} (line 16) - $n = 10000$ by convention.
+	\item {\tt amount} (line 27) - This exactly corresponds to our calculation for the first block reward (17.592186044415 XMR) in Section \ref{subsec:block-reward}.
+	\item {\tt key} (line 29) - The very first Moneroj was dispersed to Monero's founder thankful\_for\_today.
+	\item {\tt signatures} (line 36) - There are no signatures in the genesis block. This is here as an artifact of the {\tt print\_block} function. The same is true for {\tt tx\_hashes} in line 38.
+\end{itemize}
+
 
 \end{appendices}
