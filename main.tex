@@ -1,10 +1,13 @@
 
-\documentclass[a4paper,11pt,english,oneside,onecolumn,final,openany]{report}
+\documentclass[usletter,11pt,english,oneside,onecolumn,final,openany]{report}
+
+%Primary packages
 \usepackage{fancyvrb}
 
 \usepackage[utf8]{inputenc}
 \usepackage[english]{babel}
 \usepackage[pdftex]{graphicx}
+
 
 % Useful packages:
 
@@ -43,12 +46,15 @@
 \newcommand\isFootnote{%
     \ifx\footnote\nextToken\textsuperscript{,}\fi}
 
+
+
 % Flexible interface to page dimensions
 % -------------------------------------
 % Default settings:
 % \usepackage[]{geometry}
 % Set specific margins:
-\usepackage[outer=2cm,inner=2.5cm,top=3cm,bottom=2.5cm]{geometry}
+\usepackage{marginnote}
+\usepackage[outer=2.62cm,inner=2.62cm,top=3cm,bottom=2.75cm, marginparwidth=2.1cm, marginparsep=.35cm]{geometry}
 
 % Control line spacing 
 % -------------------------------------
@@ -57,9 +63,13 @@
 \spacing{1.1}
 
 
-% Control papersize and margins
-% -------------------------------------
-\usepackage{anysize} 
+%Tree drawing
+\usepackage{tikz}
+\usetikzlibrary{trees, arrows}
+\usepackage{pgfplots}
+
+\usepackage[edges,linguistics]{forest}
+
 
 % Tabular package extensions
 % -------------------------------------
@@ -96,6 +106,11 @@
 \newcommand\nd{\textsuperscript{nd}\xspace}
 \newcommand\rd{\textsuperscript{rd}\xspace}
 \newcommand\nth{\textsuperscript{th}\xspace}
+
+% List spacing
+\usepackage{enumitem}
+\setlist[itemize]{topsep=0pt}
+\newcommand{\listspace}{-.4em}
 
 % ___________________________________________________________________________________________________________
 %
@@ -136,21 +151,16 @@
 
 
 \vfill{}
-{\par\centering \textsc{\LARGE Zero to Monero \\Privacy in the blockchain: First Edition \\Draft 0.0.10}\par}
+{\par\centering \textsc{\LARGE Zero to Monero \\Privacy in the blockchain: First Edition \\\today{} Draft 0.20.0}\par}
 \bigskip
-{\par\centering \textsc{\large Kurt M. Alonso \\ }
-\par \textsc{\large koe\footnote{Forked from original paper's github 03/20/2018. https://github.com/kurtmagnus/Monero-RCT-report} }\par}
+{\par\centering \textsc{\large Kurt M. Alonso\footnote{\label{donation-request}Dear reader, \\
+Welcome to our report, we hope you enjoy it! \\ \\
+Do you feel Monero has enough documentation? \\ \\
+If you find this report valuable you can donate Monero (XMR), empowering us to keep this report up-to-date with new developments, to assemble new reports, and basically to survive, here:
+\vspace*{.1cm}\\
+\makebox[\textwidth][c]{43sHzpng7oFAUMrRzg5RSg2XoYQbCSRYBRt4PV61ByqwY9ovfRGqMenj3ZkEQEaXsf7edQtTitH5xKG3t27kkKafKX4oFzY}\vspace*{.1cm}\\\vspace*{.3cm}We can keep going with your support!\\\vspace*{.1cm}Please note this report is released into the public domain.}\footnote{kurt@oktav.se}}
+\par \textsc{\large koe$^{\ref{donation-request}, }$\footnote{ukoe@protonmail.com; for questions and comments, we recommend CC'ing both authors.} }\par}
 \vfill{}
-
-%\footnote{\label{donation-request}Dear reader,\par
-%Welcome to our report, we hope you enjoy it!\\
-%Do you feel Monero has enough documentation? Are there enough in-depth reference materials?
-%If you find this report valuable you can donate XMR, empowering us to continue expanding and perfecting this report, and to assemble new reports, here:\\
-%-----integrated address w/ payment ID 'z 2 m 1st ed' -> binary
-%Your generosity is a great honor to us, thank you!\\
-%
-%P.S. This is an integrated address, which you will find described in Section \ref{sec:integrated-addresses}.
-%author notes: email addresses? and do superscript ref{donation-request}
 
 \begin{center}
   \begin{minipage}[t]{0.8\columnwidth}
@@ -169,7 +179,7 @@
 \newpage
 \pagestyle{empty}
 \begin{center}
-\vspace*{3.5cm}
+\vspace*{\fill}%\vspace*{3.5cm}
 {\LARGE \bfseries  Abstract}
 \end{center}
 \vspace{0.5cm}
@@ -180,11 +190,12 @@
 \include{front/abstract}
 \begin{center} \vrule width 4.5in height 0.4pt \end{center} 
 \end{minipage} 
+\vspace*{\fill}
 \end{center}
 
-
 % ------ Table of contents and figures ---------
-
+\newpage
+\pagestyle{plain}
 \tableofcontents
 %\listoffigures
 
@@ -204,9 +215,8 @@
 \include{content/ring-signatures}
 \include{content/commitments}
 \include{content/Transactions}
-%\include{content/multisig}
-%\include{content/blockchain}
-%\include{content/Monero-cryptocurrency}
+\include{content/multisig}
+\include{content/blockchain}
 
 
 % ___________________________________________________________________________________________________________
