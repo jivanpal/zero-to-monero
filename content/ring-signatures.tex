@@ -135,7 +135,7 @@ Given a fixed set of public keys \(\mathcal{R}\) and two valid signatures for di
 \sigma(\mathfrak{m})   &= (c_1, r_1, ..., r_n)\textrm{ with } \tilde{K}\textrm{, and}\\
 \sigma'(\mathfrak{m}')  &= (c_1', r'_1, ..., r'_n)\textrm{ with } \tilde{K}'\textrm{,}
 \end{align*}
-\quad if \(\tilde{K} =  \tilde{K}'\) then clearly both signatures come from the same signing ring and private key because $\tilde{K}= k_{\pi} \mathcal{H}_p(\mathcal{R})$.
+\quad if \(\tilde{K} =  \tilde{K}'\) then clearly both signatures come from the same signing ring and private key.% because $\tilde{K}= k_{\pi} \mathcal{H}_p(\mathcal{R})$.
 
 While an observer could link $\sigma$ and $\sigma'$, he wouldn’t know which $K_i$ in $\mathcal{R}$ was the culprit without solving the DLP or auditing $\mathcal{R}$ in some way (such as learning all $k_i$ with $i \neq \pi$, or learning $k_\pi$).\footnote{\label{lsag_unforgeable_note}LSAG is unforgeable, meaning no attacker could make a valid ring signature without knowing a private key. If he invents a fake $\tilde{K}$ and seeds his signature computation with $c_{\pi+1}$, then, not knowing $k_\pi$, he can’t calculate a number $r_\pi = \alpha - c_\pi k_\pi$ that would produce $[r_\pi G + c_\pi K_\pi] = \alpha G$. A verifier would reject his signature. Liu {\em et al.} prove forgeries that manage to pass verification are extremely improbable \cite{Liu2004}.}
 
@@ -213,7 +213,10 @@ Such an algorithm would address our multi-input needs if we generalize the notio
 	
 	\item Generate random numbers  \(\alpha_j \in_R \mathbb{Z}_l\), and \(r_{i, j} \in_R \mathbb{Z}_l\) for \(i \in \{1, 2, ..., n\}\) (except \(i = \pi\)) and \(j \in \{1, 2, ..., m\}\).
 	
-	\item Compute 
+	\item Compute\footnote{Monero\marginnote{src/ringct/ rctSigs.cpp MLSAG\_gen()} MLSAG uses so-called `key prefixing', which, when implemented, was thought to allow better security proofs for multi-user Schnorr-like signatures. Recent research suggests it isn't necessary. \cite{key-prefix-paper} Each challenge contains an explicit public key like this:
+	\[
+	c_{\pi+1} = \mathcal{H}_n(\mathfrak{m}, K_{\pi, 1}, [\alpha_1 G], [\alpha_1 \mathcal{H}_p(K_{\pi, 1})], ..., K_{\pi, m}, [\alpha_m G], [\alpha_m \mathcal{H}_p(K_{\pi, m})])
+	\]} 
 	\[
 	c_{\pi+1} = \mathcal{H}_n(\mathfrak{m}, [\alpha_1 G], [\alpha_1 \mathcal{H}_p(K_{\pi, 1})], ..., [\alpha_m G], [\alpha_m \mathcal{H}_p(K_{\pi, m})])
 	\]

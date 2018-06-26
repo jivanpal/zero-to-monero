@@ -371,19 +371,19 @@ We can use the Merkle root to reference all of a blocks transactions, while faci
 A block is basically a block header and some transactions. Block headers record important information about each block. A block's transactions can be referenced with their Merkle root. We present here the outline of a block's content. Our readers can find a real block example in Appendix \ref{appendix:block-content}.
 
 \begin{itemize}
-    \item Block header:
+    \item \underline{Block header}:
     \begin{itemize}
-        \item Major version - Used to track hard forks (changes to protocol).
-        \item Minor version - Previously used for voting, now just displays the major version again.
-        \item Timestamp\marginnote{src/crypto- note\_core/ block- chain.cpp check\_block\_ timestamp()} - UTC (Coordinated Universal Time) time of block. Added by miners, timestamps are unverified but they won't be accepted if lower than the median timestamp of the last 60 blocks. %check_block_timestamp
-        \item Previous block's ID - Referencing the previous block, this is the essential feature of a blockchain.
-        \item nonce - A 32 byte integer that miners change over and over until the PoW hash meets the difficulty target. Block verifiers can easily recalculate the PoW hash.
+        \item \textbf{Major version}: Used to track hard forks (changes to protocol).
+        \item \textbf{Minor version}: Previously used for voting, now just displays the major version again.
+        \item \textbf{Timestamp}:\marginnote{src/crypto- note\_core/ block- chain.cpp check\_block\_ timestamp()} UTC (Coordinated Universal Time) time of block. Added by miners, timestamps are unverified but they won't be accepted if lower than the median timestamp of the last 60 blocks. %check_block_timestamp
+        \item \textbf{Previous block's ID}: Referencing the previous block, this is the essential feature of a blockchain.
+        \item \textbf{nonce}: A 32 byte integer that miners change over and over until the PoW hash meets the difficulty target. Block verifiers can easily recalculate the PoW hash.
     \end{itemize}
-    \item Miner transaction - Disperses block reward and transaction fees to the block's miner.
-    \item Transaction IDs - References to non-miner transactions added to the blockchain by this block. Tx IDs can, in combination with the miner tx ID, be used to calculate the Merkle root, and to find the actual transactions wherever they are stored.
+    \item \underline{Miner transaction}: Disperses block reward and transaction fees to the block's miner.
+    \item \underline{Transaction IDs}: References to non-miner transactions added to the blockchain by this block. Tx IDs can, in combination with the miner tx ID, be used to calculate the Merkle root, and to find the actual transactions wherever they are stored.
 \end{itemize}
 \marginnote{src/crypto- note\_basic/ cryptonote\_ format\_ utils.cpp calculate\_ block\_hash()}[-2.3cm]
-Block IDs are computed like this:\footnote{We add 1 to the number of transactions to account for the miner tx.} %calculate_block_hash, which ultimately uses cn_fast_hash(get_block_hashing_blob)
+Block IDs are computed like this:\footnote{+1 accounts for the miner tx.} %calculate_block_hash, which ultimately uses cn_fast_hash(get_block_hashing_blob)
 \[ \textrm{Block ID} = \mathcal{H}_n(\textrm{Block header}, \textrm{Merkle root}, \# \textrm{transactions} + 1) \]
 
 And block mining\marginnote{get\_block\_ longhash()} is performed like this:\\ %get_block_hashing_blob, get_block_longhash
