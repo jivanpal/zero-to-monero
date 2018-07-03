@@ -2,7 +2,7 @@
 
 This is a comprehensive conceptual (and technical) explanation of Monero. I will be updating periodically, and publishing full editions when they are complete.
 
-The first edition is currently being published, and should be available by the end of June.
+The first edition was published on getmonero.org in the Library section: https://getmonero.org/library/
 
 Complete content:  
 -Monero transactions (first edition)  
