@@ -4,6 +4,15 @@ This is a comprehensive conceptual (and technical) explanation of Monero. I will
 
 The first and second editions were published on getmonero.org in the Library section: https://web.getmonero.org/library/
 
+*Checksums*
+
+To calculate a checksum, open the terminal/command line and navigate into the folder containing the file you wish to check. Type 'shasum -a 256 file_name'.
+
+First Edition checksum: 8e235da06fd96fe84701c3812ad47599985c0b72fe05ddd6e4af3c2f573ab28c  Zero-to-Monero-1-0-0.pdf
+
+Second Editon checksum: a784a342141a6c237bdc1ef1c227e6865fae08b2a1b5f10aa4a47af01929a55a  Zero-to-Monero-2-0-0.pdf
+
+
 *Translations*
 
 ZtM is written in LaTeX, so it is not easily integrated with translation services like transifex. The unwieldy solution is to make new Github repositories for translation projects, which contributors can submit pull requests to.
@@ -15,9 +24,11 @@ ZtM is written in LaTeX, so it is not easily integrated with translation service
 5. After the document is done being translated, either make a pull request on my repository here, or let me know and I will pull it in.
 
 Completed translations:
+
 -English (original)
 
 Current translations in progress:
+
 -(none that I know)
 
 *License*
