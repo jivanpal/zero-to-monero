@@ -10,7 +10,7 @@ To calculate a checksum, open the terminal/command line and navigate into the fo
 
 First Edition checksum: 8e235da06fd96fe84701c3812ad47599985c0b72fe05ddd6e4af3c2f573ab28c  Zero-to-Monero-1-0-0.pdf
 
-Second Editon checksum: a784a342141a6c237bdc1ef1c227e6865fae08b2a1b5f10aa4a47af01929a55a  Zero-to-Monero-2-0-0.pdf
+Second Edition checksum: a784a342141a6c237bdc1ef1c227e6865fae08b2a1b5f10aa4a47af01929a55a  Zero-to-Monero-2-0-0.pdf
 
 
 *Translations*
