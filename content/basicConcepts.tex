@@ -48,23 +48,62 @@ Note that, if $a \leq n$, $-a \pmod n$ is the same as $n - a$.
 \subsection{Modular addition and multiplication}
 \label{subsec:modular-addition-multiplication}
 
-In computer science it is important to avoid large numbers when doing modular arithmetic. For example, if we have $29+87 \pmod{99}$ and we aren't allowed variables with three or more digits (such as $116 = 29+87$), then we can't compute $116 \pmod{99} = 17$ directly.
+In computer science it is important to avoid large numbers when doing modular arithmetic. For example, if we want to compute $(29 + 87) \mod 99$ and we aren't allowed variables with three or more digits (such as $116 = 29 + 87$), then we can't compute $116 \pmod{99} = 17$ directly.
 
-To perform $c = a+b \pmod n$, where $a$ and $b$ are each less than the modulus $n$, we can do this:
+To compute $c = (a + b) \mod n$, where $a$ and $b$ are each less than the modulus $n$, we can do this:
 \begin{itemize}
-	\item Compute $x = n-a$. If $x > b$ then $c = a+b$, otherwise $c = b - x$.
+	\item Compute $x = n - a$. If $x > b$ then $c = a + b$, otherwise $c = b - x$.
 \end{itemize}
 
-We can use modular addition to achieve modular multiplication ($a*b \pmod n = c$) with an algorithm called `double-and-add'. Let us demonstrate by example. Say we want to do $7*8 \pmod 9 = 2$. It is the same as 
-\[7*8 = 8+8+8+8+8+8+8 \pmod 9\]
+We can compute a modular product, e.g. $(a \times b) \mod n$, with an algorithm called `double-and-add'. Let us demonstrate by example. Say we want to compute $(11 \times 9) \mod 10$. Consider, firstly, how we might compute $11 \times 9$ efficiently. We can write $11$ as a sum of powers of 2, that is $11 = 2^3 + 2^1 + 2^0$ and then write
 
-Now break this into groups of two. 
-\[(8+8) + (8+8) + (8+8) + 8\]
 
-And again, by groups of two.
-\[[(8+8) + (8+8)] + (8+8) + 8\]
+\begin{align*}
+	11 \times 9	&= (2^3 + 2^1 + 2^0) \times 9
+	\\			&= 2^3 \times 9 + 2^1 \times 9 + 2^0 \times 9.
+\end{align*}
 
-The total number of $+$ point operations falls from 6 to 4 because we only need to find $(8+8)$ once.\footnote{The effect of double-and-add becomes apparent with large numbers. For example, with $2^{15} * 2^{30}$ straight addition would require about $2^{15}$ $+$ operations, while double-and-add only requires 15!}\\
+We can then compute each of these products just by doubling 9, keeping the current value in our head, and substituting as appropriate, as follows:
+
+\begin{itemize}
+	\item The number 9 itself is $2^0 \times 9$ (that is, 9 doubled 0 times). We substitute this.
+	\item Doubling 9 gives 18, which is $2^1 \times 9$. We substitute this.
+	\item Doubling 18 gives 36, which is $2^2 \times 9$. This doesn't appear, so we don't need to substitute it, but\dots
+	\item \dots doubling 36 gives 72, which is $2^3 \times 9$. We substitute this.
+\end{itemize}
+
+Thus, $11 \times 9 = (72 + 18) + 9 = 90 + 9 = 99$. Crucially, we only needed to perform 3 doublings and 2 additions, for a total of 5 operations. This is less operations than the 8 additions we would have performed if we just computed $11 \times 9$ as $11+11+11+11+11+11+11+11+11$ without realising that we can group terms that appear more than once, e.g. by writing
+
+$$ 11 \times 9 = \big( (11+11) + (11+11) \big) + \big( (11+11) + (11+11) \big) + 11, $$
+
+wherein $\big( (11+11) + (11+11) \big)$ appears twice, and is itself made out of two occurrences of $(11+11)$. However, as it turns out, this grouping is equivalent to that expressed by $11 \times 9 = (2^3 + 2^1 + 2^0) \times 9$.\footnote{The effect of double-and-add becomes apparent with large numbers. For example, with $2^{15} \times 2^{30}$ straight addition would require about $2^{15}$ $+$ operations, while double-and-add only requires 15!}
+
+We can use this technique to efficiently compute the result modulo 10 by just taking the remainder after each doubling or addition, as follows:
+
+\begin{align*}
+	(11 \times 9) \mod 10	&= \big( (2^3 + 2^1 + 2^0) \times 9 \big) \mod 10
+	\\						&= \big( (2^3 \times 9) \mod 10 + (2^1 \times 9) \mod 10 + (2^0 \times 9) \mod 10 \big) \mod 10
+\end{align*}
+
+We compute each term by performing doubling modulo 10.
+
+\begin{itemize}
+	\item The number 9 itself is $(2^0 \times 9) \mod 10$, (that is, 9 doubled 0 times, modulo 10). We substitute this.
+	\item Doubling 9 and reducing mod 10 gives 8, which is $(2^1 \times 9) \mod 10$. We substitute this.
+	\item Doubling 8 and reducing mod 10 gives 6, which is $(2^2 \times 9) \mod 10$. This doesn't appear, so we don't substitute it, but\dots
+	\item \dots doubling 6 and reducing mod 10 gives 2, which is $(2^3 \times 9) \mod 10$. We substitute this.
+\end{itemize}
+
+This gives us
+
+\begin{align*}
+	(11 \times 9) \mod 10	&= (2 + 8 + 9) \mod 10
+	\\						&= \big( (2 + 8) \mod 10 + 9 \big) \mod 10
+	\\						&= \big( 0 + 9 \big) \mod 10
+	\\						&= 9.
+\end{align*}
+
+The total number of additions we actually need to compute falls from 6 to 4, because we only need to compute $ 8+8 $ once.\\
 
 Double-and-add is implemented by converting the first number (the `multiplicand' $a$) to binary (in our example, 7 $\rightarrow$ [0111]), then going through the binary array and doubling and adding. 
 
